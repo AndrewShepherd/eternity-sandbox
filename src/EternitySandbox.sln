@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImportResources", "ImportResources\ImportResources.csproj", "{28239774-98DC-4A56-90B9-79B2A3B2F921}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity", "Eternity\Eternity.csproj", "{99020B2A-587D-42AF-8431-3BC4CAD3E849}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.WpfApp", "Eternity.WpfApp\Eternity.WpfApp.csproj", "{B2D79A95-2BE5-4E21-AEA5-E2DF3335F098}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{28239774-98DC-4A56-90B9-79B2A3B2F921}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28239774-98DC-4A56-90B9-79B2A3B2F921}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28239774-98DC-4A56-90B9-79B2A3B2F921}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28239774-98DC-4A56-90B9-79B2A3B2F921}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99020B2A-587D-42AF-8431-3BC4CAD3E849}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99020B2A-587D-42AF-8431-3BC4CAD3E849}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99020B2A-587D-42AF-8431-3BC4CAD3E849}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99020B2A-587D-42AF-8431-3BC4CAD3E849}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2D79A95-2BE5-4E21-AEA5-E2DF3335F098}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2D79A95-2BE5-4E21-AEA5-E2DF3335F098}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2D79A95-2BE5-4E21-AEA5-E2DF3335F098}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2D79A95-2BE5-4E21-AEA5-E2DF3335F098}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
