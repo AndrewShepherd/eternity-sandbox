@@ -10,5 +10,6 @@ namespace Eternity.WpfApp
 
 		public double Top { get; set; }
 		public double Left { get; set; }
+		public int Rotation { get; internal set; }
 	}
 }

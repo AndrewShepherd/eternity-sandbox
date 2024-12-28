@@ -109,17 +109,11 @@ namespace Eternity.WpfApp
 				}
 			);
 
-
-			var positionBuilder = ImmutableArray.CreateBuilder<Position>();
-			positionBuilder.AddRange(GeneratePositions());
-
-			var imageBuilder = ImmutableArray.CreateBuilder<BitmapImage>();
-			imageBuilder.AddRange(bitmapImages);
-
 			return new PuzzleEnvironment
 			{
-				PositionLookup = positionBuilder.ToImmutableArray(),
-				Images = imageBuilder.ToImmutableArray()
+				PositionLookup = GeneratePositions().ToImmutableArray(),
+				Images = bitmapImages.ToImmutableArray(),
+				PieceSides = pieces.Select(p => p.Sides).Select(s => s.ToImmutableArray()).ToImmutableArray()
 			};
 		}
 	}

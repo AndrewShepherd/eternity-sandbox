@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -22,8 +23,6 @@ namespace Eternity.WpfApp
 			remove => _propertyChangedEventHandler -= value;
 		}
 
-
-
 		public IEnumerable<CanvasItem> CanvasItems
 		{
 			get;
@@ -31,37 +30,61 @@ namespace Eternity.WpfApp
 		} = Enumerable.Empty<CanvasItem>();
 
 
-		private static IEnumerable<CanvasItem> GenerateCanvasItems(PuzzleEnvironment environment)
+		private static IEnumerable<CanvasItem> GenerateCanvasItems(PuzzleEnvironment environment, IEnumerable<Placement> placements)
 		{
-			CanvasItem[] result = new CanvasItem[environment.Images.Length];
+
 			var firstImage = environment.Images[0];
 			var imageWidth = firstImage.Width;
 			var imageHeight = firstImage.Height;
-			for(int i = 0; i < environment.Images.Length; ++i)
-			{
-				var image = environment.Images[i];
-				var position = environment.PositionLookup[i];
-				result[i] = new CanvasItem
+
+			var canvasItems = placements.Select(
+				(placement, index) =>
 				{
-					ImageSource = image,
-					Left = position.X * imageWidth,
-					Top = position.Y * imageHeight
-				};
-			}
-			return result;
+					var position = environment.PositionLookup[index];
+					return new CanvasItem
+					{
+						ImageSource = environment.Images[placement.PieceIndex],
+						Left = position.X * imageWidth,
+						Top = position.Y * imageHeight,
+						Rotation = (int)placement.rotation * 90,
+					};
+				}
+			).ToList();
+			return canvasItems;
 		}
 
 		private async void LoadImages()
 		{
 			var puzzleEnvironment = await PuzzleEnvironment.Generate();
-			this.CanvasItems = GenerateCanvasItems(puzzleEnvironment);
+			List<Placement> l = new List<Placement>();
+
+
+			Dictionary<Position, int> reversePositionLookup = puzzleEnvironment.PositionLookup.Select(
+				(position, index) => KeyValuePair.Create(position, index)
+				).ToDictionary();
+			for(int i = 0; i < puzzleEnvironment.PieceSides.Length; ++i)
+			{
+				var position = puzzleEnvironment.PositionLookup[i];
+				var sides = puzzleEnvironment.PieceSides[i];
+
+				var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
+					puzzleEnvironment,
+					reversePositionLookup,
+					l,
+					i
+				);
+				IEnumerable<Rotation> rotations = PuzzleSolver.GetRotations(sides, edgeRequirements);
+
+				l.Add(new Placement(i, rotations.FirstOrDefault()));
+			}
+			this.CanvasItems = GenerateCanvasItems(puzzleEnvironment, l);
 			this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
 		}
 
 
+
 		public MainWindowViewModel()
 		{
-			var pe = PuzzleEnvironment.Generate().Result;
 			LoadImages();
 		}
 	}
