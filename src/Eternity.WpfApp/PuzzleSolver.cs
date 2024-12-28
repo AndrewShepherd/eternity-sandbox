@@ -28,6 +28,28 @@ namespace Eternity.WpfApp
 			return result.ToImmutableArray();
 		}
 
+
+		private static int? GetAdjacentSideColor(
+			PuzzleEnvironment puzzleEnvironment,
+			Position position,
+			Dictionary<Position, int> reversePositionLookup,
+			List<Placement> existingPlacements,
+			int edgeIndex
+		)
+		{
+			if (reversePositionLookup.TryGetValue(position, out var placementIndex))
+			{
+				if (placementIndex <= existingPlacements.Count)
+				{
+					var topPlacement = existingPlacements[placementIndex];
+					var topColors = puzzleEnvironment.PieceSides[topPlacement.PieceIndex];
+					var topColorsRotated = Rotate(topColors, topPlacement.rotation);
+					return topColorsRotated[edgeIndex];
+				}
+			}
+			return default;
+		}
+
 		public static EdgeRequirements GetEdgeRequirements(
 			PuzzleEnvironment puzzleEnvironment,
 			Dictionary<Position, int> reversePositionLookup,
@@ -35,6 +57,13 @@ namespace Eternity.WpfApp
 			int targetPositionIndex
 		)
 		{
+			Func<Position, int, int?> getAdjacentSideColor = (position, edgeIndex) => GetAdjacentSideColor(
+				puzzleEnvironment,
+				position,
+				reversePositionLookup,
+				existingPlacements,
+				edgeIndex
+			);
 			var target = puzzleEnvironment.PositionLookup[targetPositionIndex];
 			int? topColor = null;
 			int? leftColor = null;
@@ -44,31 +73,45 @@ namespace Eternity.WpfApp
 			{
 				topColor = 23;
 			}
+			else
+			{
+				topColor = getAdjacentSideColor(
+					new Position(target.X, target.Y - 1),
+					EdgeIndexes.Bottom
+				);
+			}
 			if (target.X == 0)
 			{
 				leftColor = 23;
 			}
 			else
 			{
-				var leftPosition = new Position(target.X - 1, target.Y);
-				if (reversePositionLookup.TryGetValue(leftPosition, out var placementIndex))
-				{
-					if (placementIndex <= existingPlacements.Count)
-					{
-						var leftPlacement = existingPlacements[placementIndex];
-						var leftColors = puzzleEnvironment.PieceSides[leftPlacement.PieceIndex];
-						var leftColorsRotated = Rotate(leftColors, leftPlacement.rotation);
-						leftColor = leftColorsRotated[EdgeIndexes.Right];
-					}
-				}
+				leftColor = getAdjacentSideColor(
+					new Position(target.X - 1, target.Y),
+					EdgeIndexes.Right
+				);
 			}
 			if (target.X == 15)
 			{
 				rightColor = 23;
 			}
+			else
+			{
+				rightColor = getAdjacentSideColor(
+					new Position(target.X + 1, target.Y),
+					EdgeIndexes.Left
+				);
+			}
 			if (target.Y == 15)
 			{
 				bottomColor = 23;
+			}
+			else
+			{
+				bottomColor = getAdjacentSideColor(
+					new Position(target.X, target.Y+1),
+					EdgeIndexes.Top
+				);
 			}
 			return new EdgeRequirements(leftColor, topColor, rightColor, bottomColor);
 		}
