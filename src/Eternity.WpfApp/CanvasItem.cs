@@ -8,7 +8,7 @@ namespace Eternity.WpfApp
 	{
 		public BitmapImage? ImageSource { get; set; }
 
-		public int Top { get; set; }
-		public int Left { get; set; }
+		public double Top { get; set; }
+		public double Left { get; set; }
 	}
 }
