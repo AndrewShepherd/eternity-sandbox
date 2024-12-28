@@ -8,7 +8,7 @@
 			return assembly.GetManifestResourceNames();
 		}
 
-		public static Stream? Load(string resourceName) =>
-			System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+		public static Stream? Load(string imageId) =>
+			System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream($"Eternity.Resources.{imageId}");
 	}
 }

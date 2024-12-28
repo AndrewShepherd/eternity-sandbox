@@ -10,7 +10,26 @@
 	<Window.Resources>
 		<local:MainWindowViewModel x:Key="MainWindowViewModel" />
 	</Window.Resources>
-    <Grid DataContext="{StaticResource MainWindowViewModel}">
-		<Image Source="{Binding ImageSource}" />
+    <Grid DataContext="{StaticResource MainWindowViewModel}"
+		Width="{Binding Mode=OneWayToSource, Path=GridWidth}">
+		<ItemsControl ItemsSource="{Binding CanvasItems}">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<Canvas />
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Image Source="{Binding ImageSource}">
+					</Image>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+			<ItemsControl.ItemContainerStyle>
+				<Style TargetType="ContentPresenter">
+					<Setter Property="Canvas.Left" Value="{Binding Left}" />
+					<Setter Property="Canvas.Top" Value="{Binding Top}" />
+				</Style>
+			</ItemsControl.ItemContainerStyle>
+		</ItemsControl>
 	</Grid>
 </Window>
