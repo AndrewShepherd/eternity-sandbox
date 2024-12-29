@@ -32,18 +32,17 @@ namespace Eternity.WpfApp
 		private static int? GetAdjacentSideColor(
 			PuzzleEnvironment puzzleEnvironment,
 			Position position,
-			Dictionary<Position, int> reversePositionLookup,
 			List<Placement> existingPlacements,
 			int edgeIndex
 		)
 		{
-			if (reversePositionLookup.TryGetValue(position, out var placementIndex))
+			if (puzzleEnvironment.ReversePositionLookup.TryGetValue(position, out var placementIndex))
 			{
 				if (placementIndex <= existingPlacements.Count)
 				{
 					var topPlacement = existingPlacements[placementIndex];
 					var topColors = puzzleEnvironment.PieceSides[topPlacement.PieceIndex];
-					var topColorsRotated = Rotate(topColors, topPlacement.rotation);
+					var topColorsRotated = Rotate(topColors, topPlacement.Rotation);
 					return topColorsRotated[edgeIndex];
 				}
 			}
@@ -52,7 +51,6 @@ namespace Eternity.WpfApp
 
 		public static EdgeRequirements GetEdgeRequirements(
 			PuzzleEnvironment puzzleEnvironment,
-			Dictionary<Position, int> reversePositionLookup,
 			List<Placement> existingPlacements,
 			int targetPositionIndex
 		)
@@ -60,7 +58,6 @@ namespace Eternity.WpfApp
 			Func<Position, int, int?> getAdjacentSideColor = (position, edgeIndex) => GetAdjacentSideColor(
 				puzzleEnvironment,
 				position,
-				reversePositionLookup,
 				existingPlacements,
 				edgeIndex
 			);
@@ -144,9 +141,7 @@ namespace Eternity.WpfApp
 		{
 			foreach(var rotation in AllRotations)
 			{
-				// Top, right, bottom, left
 				var rotatedSides = Rotate(sides, rotation);
-
 				EdgeRequirements thisRequirements = new EdgeRequirements(
 					rotatedSides[EdgeIndexes.Left],
 					rotatedSides[EdgeIndexes.Top],

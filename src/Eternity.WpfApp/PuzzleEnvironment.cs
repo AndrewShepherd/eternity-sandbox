@@ -14,7 +14,6 @@ namespace Eternity.WpfApp
 	{
 		private PuzzleEnvironment()
 		{
-
 		}
 
 		public ImmutableArray<BitmapImage> Images 
@@ -28,6 +27,12 @@ namespace Eternity.WpfApp
 			get;
 			private init;
 		}
+
+		public ImmutableDictionary<Position, int> ReversePositionLookup
+		{
+			get;
+			private init;
+		} = ImmutableDictionary<Position, int>.Empty;
 
 		public ImmutableArray<ImmutableArray<int>> PieceSides;
 
@@ -102,18 +107,22 @@ namespace Eternity.WpfApp
 			var bitmapImages = pieces.Select(
 				p =>
 				{
-					using(var stream = ImageProvider.Load(p.ImageId))
-					{
-						return CreateFromStream(stream!)
-;					}
+					using (var stream = ImageProvider.Load(p.ImageId))
+						return CreateFromStream(stream!);
 				}
 			);
 
+			var positionLookup = GeneratePositions();
+			var reversePositionLookup = positionLookup.Select(
+				(position, index) => KeyValuePair.Create(position, index)
+				).ToDictionary();
+
 			return new PuzzleEnvironment
 			{
-				PositionLookup = GeneratePositions().ToImmutableArray(),
+				PositionLookup = positionLookup.ToImmutableArray(),
+				ReversePositionLookup = reversePositionLookup.ToImmutableDictionary(),
 				Images = bitmapImages.ToImmutableArray(),
-				PieceSides = pieces.Select(p => p.Sides).Select(s => s.ToImmutableArray()).ToImmutableArray()
+				PieceSides = pieces.Select(p => p.Sides).Select(s => s.ToImmutableArray()).ToImmutableArray(),
 			};
 		}
 	}
