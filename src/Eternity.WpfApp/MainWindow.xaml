@@ -41,6 +41,9 @@
 			<Button Command="{Binding GenerateRandomCommand}">
 				Random
 			</Button>
+			<Button Command="{Binding TryNextCommand}">
+				Search
+			</Button>
 		</StackPanel>
 	</Grid>
 </Window>

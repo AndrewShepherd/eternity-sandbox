@@ -49,6 +49,32 @@
 			).ToArray();
 		}
 
+		public static int[] Increment(IReadOnlyList<int> sequence, int index)
+		{
+			if (sequence[index] == _dimensions[index] - 1)
+			{
+				return Increment(sequence, index - 1);
+			}
+			int[] result = new int[sequence.Count];
+			for(int i = 0; i < sequence.Count; ++i)
+			{
+				result[i] = i switch
+				{
+					int n when n < index => sequence[i],
+					int n when n == index => sequence[i] + 1,
+					_ => 0
+				};
+			}
+			return result;
+		}
+
+		public static int ListPlacementIndexToSequenceIndex(int listPlacementIndex) =>
+			listPlacementIndex switch
+			{
+				< 4 => 0,
+				< 60 => listPlacementIndex - 3,
+				_ => listPlacementIndex - 4
+			};
 		public static int[] GeneratePieceIndexes(IReadOnlyList<int> sequence)
 		{
 			var result = new int[256];

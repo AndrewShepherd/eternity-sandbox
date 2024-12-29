@@ -8,6 +8,10 @@
 	using System.Windows.Input;
 	using static Eternity.WpfApp.CanvasItemExtensions;
 	using System.Reactive.Threading.Tasks;
+	using System.Windows.Markup;
+	using System.Windows.Threading;
+	using System.Text.Json.Serialization;
+	using System.Diagnostics;
 
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
@@ -29,13 +33,40 @@
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(GenerateRandom);
 
+		public ICommand TryNextCommand => new DelegateCommand(TryNext);
 
-		private static IEnumerable<Placement> GenerateListPlacements(
-			PuzzleEnvironment puzzleEnvironment, 
+
+		public void TryNext()
+		{
+			var t = Task.Run(
+				async () =>
+				{
+					var currentSequence = _sequence.Value;
+					var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
+
+					while (true)
+					{
+						var pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
+						var (_, badListPlacementIndex) = TryGenerateListPlacements(puzzleEnvironment, pieceIndexes);
+						if (!badListPlacementIndex.HasValue)
+						{
+							break;
+						}
+						int badIndex = Sequence.ListPlacementIndexToSequenceIndex(badListPlacementIndex.Value);
+						currentSequence = Sequence.Increment(currentSequence, badIndex);
+						_sequence.OnNext(currentSequence);
+					}
+				}
+			);
+		}
+
+		private static (IEnumerable<Placement>, int?) TryGenerateListPlacements(
+			PuzzleEnvironment puzzleEnvironment,
 			int[] pieceIndexes
 		)
 		{
 			List<Placement> listPlacements = new List<Placement>();
+			int? firstFailedIndex = default;
 			for (int i = 0; i < pieceIndexes.Length; ++i)
 			{
 				var pieceIndex = pieceIndexes[i];
@@ -48,9 +79,22 @@
 					i
 				);
 				IEnumerable<Rotation> rotations = PuzzleSolver.GetRotations(sides, edgeRequirements);
-
+				if (!rotations.Any())
+				{
+					firstFailedIndex = firstFailedIndex ?? i;
+				}
 				listPlacements.Add(new Placement(pieceIndex, rotations.FirstOrDefault()));
 			}
+			return (listPlacements, firstFailedIndex);
+
+		}
+
+		private static IEnumerable<Placement> GenerateListPlacements(
+			PuzzleEnvironment puzzleEnvironment, 
+			int[] pieceIndexes
+		)
+		{
+			var (listPlacements, firstFailure) = TryGenerateListPlacements(puzzleEnvironment, pieceIndexes);
 			return listPlacements;
 		}
 
@@ -62,23 +106,31 @@
 
 		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.GenerateRandomSequence());
 
+		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 		public MainWindowViewModel()
 		{
-			var puzzleEnvironmentObservable = PuzzleEnvironment.Generate().ToObservable();
+			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
 
 			var canvasItemObservable =
-				from pieceIndexes in (from s in _sequence select Sequence.GeneratePieceIndexes(s))
+				from pieceIndexes in (
+					from s in _sequence.Sample(TimeSpan.FromSeconds(1.0))
+					select Sequence.GeneratePieceIndexes(s)
+				)
 				from puzzleEnvironment in puzzleEnvironmentObservable
 				let listPlacements = GenerateListPlacements(puzzleEnvironment, pieceIndexes)
 				select GenerateCanvasItems(puzzleEnvironment, listPlacements);
 
-			canvasItemObservable.Subscribe(
-				canvasItems =>
-				{
-					this.CanvasItems = canvasItems;
-					this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
-				}
-			);
+			canvasItemObservable
+				//.ObserveOn(SynchronizationContext.Current!)
+				//.Throttle(TimeSpan.FromSeconds(1.0))
+				.Subscribe(
+					canvasItems =>
+					{
+						Debug.WriteLine("Updating the canvas items");
+						this.CanvasItems = canvasItems;
+						this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
+					}
+				);
 
 			
 		}
