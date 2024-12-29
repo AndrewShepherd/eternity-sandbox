@@ -6,11 +6,26 @@
 	{
 		const int NonCornerEdgePieceCount = 14 * 4;
 		const int InnerPieceCount = 14 * 14;
+
+		private static int[][] CornerPermutations = [
+			[0, 1, 2, 3],
+			[0, 1, 3, 2],
+			[0, 2, 1, 3],
+			[0, 2, 3, 1],
+			[0, 3, 1, 2],
+			[0, 3, 2, 1],
+			//[1, 0, 2, 3],
+			//[1, 0, 3, 2],
+			//[2, 0, 1, 3],
+			//[2, 0, 3, 1],
+			//[3, 0, 1, 2],
+			//[3, 0, 2, 1]
+		];
 		private static int[] GenerateDimensions()
 		{
 			int index = 0;
 			var dimensions = new int[1 + (NonCornerEdgePieceCount - 1) + (InnerPieceCount - 1)];
-			dimensions[index++] = 12;
+			dimensions[index++] = CornerPermutations.Length;
 			for(int i = NonCornerEdgePieceCount; i > 1; --i)
 			{
 				dimensions[index++] = i;
@@ -26,21 +41,8 @@
 
 		public static ImmutableArray<int> Dimensions => _dimensions;
 
-		private static int[][] CornerPermutations = [
-			[0, 1, 2, 3],
-			[0, 1, 3, 2],
-			[0, 2, 1, 3],
-			[0, 2, 3, 1],
-			[0, 3, 1, 2],
-			[0, 3, 2, 1],
-			[1, 0, 2, 3],
-			[1, 0, 3, 2],
-			[2, 0, 1, 3],
-			[2, 0, 3, 1],
-			[3, 0, 1, 2],
-			[3, 0, 2, 1]
-		];
 
+		public static int[] FirstSequence => new int[_dimensions.Length];
 		public static int[] GenerateRandomSequence()
 		{
 			var random = new Random();

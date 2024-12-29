@@ -78,10 +78,12 @@
 					listPlacements,
 					i
 				);
-				IEnumerable<Rotation> rotations = PuzzleSolver.GetRotations(sides, edgeRequirements);
-				if (!rotations.Any())
+				var rotations = PuzzleSolver.GetRotations(sides, edgeRequirements)
+					.ToArray();
+				if (rotations.Length == 0)
 				{
 					firstFailedIndex = firstFailedIndex ?? i;
+					return (listPlacements, firstFailedIndex);
 				}
 				listPlacements.Add(new Placement(pieceIndex, rotations.FirstOrDefault()));
 			}
@@ -104,16 +106,32 @@
 		}
 
 
-		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.GenerateRandomSequence());
+		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.FirstSequence);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
+
+
+		private static string AsTwoDigitHex(int n)
+		{
+			var unpaddedHex = $"{n:X}";
+			return unpaddedHex.Length == 1 ? $"0{unpaddedHex}" : unpaddedHex;
+		}
+		private static string SequenceToString(IEnumerable<int> sequence) =>
+			string.Join(' ', sequence.Select(AsTwoDigitHex));
+
+		public string SequenceAsString { get; set; } = string.Empty;
+
 		public MainWindowViewModel()
 		{
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
 
+			var sampledSequence = _sequence.Sample(TimeSpan.FromSeconds(0.5))
+				.ObserveOn(SynchronizationContext.Current!);
+
+			
 			var canvasItemObservable =
 				from pieceIndexes in (
-					from s in _sequence.Sample(TimeSpan.FromSeconds(1.0))
+					from s in sampledSequence
 					select Sequence.GeneratePieceIndexes(s)
 				)
 				from puzzleEnvironment in puzzleEnvironmentObservable
@@ -121,8 +139,6 @@
 				select GenerateCanvasItems(puzzleEnvironment, listPlacements);
 
 			canvasItemObservable
-				//.ObserveOn(SynchronizationContext.Current!)
-				//.Throttle(TimeSpan.FromSeconds(1.0))
 				.Subscribe(
 					canvasItems =>
 					{
@@ -132,7 +148,17 @@
 					}
 				);
 
-			
+			_sequence.Sample(TimeSpan.FromSeconds(0.1))
+				.ObserveOn(SynchronizationContext.Current!)
+				.Select(SequenceToString)
+				.Subscribe(
+				s =>
+				{
+					this.SequenceAsString = s;
+					this._propertyChangedEventHandler?.Invoke(this, new(nameof(SequenceAsString)));
+				}
+			);
+
 		}
 	}
 }

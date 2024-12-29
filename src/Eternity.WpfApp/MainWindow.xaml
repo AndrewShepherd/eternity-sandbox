@@ -44,6 +44,8 @@
 			<Button Command="{Binding TryNextCommand}">
 				Search
 			</Button>
+			<TextBlock Text="{Binding SequenceAsString}" TextWrapping="WrapWithOverflow"
+					   Width="200" />
 		</StackPanel>
 	</Grid>
 </Window>
