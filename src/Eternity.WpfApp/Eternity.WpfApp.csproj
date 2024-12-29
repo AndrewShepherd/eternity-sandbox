@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Prism.Core" Version="9.0.537" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Eternity\Eternity.csproj" />
   </ItemGroup>
 

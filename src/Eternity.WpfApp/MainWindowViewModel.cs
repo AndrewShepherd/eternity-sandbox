@@ -1,9 +1,10 @@
 ﻿namespace Eternity.WpfApp
 {
+	using Prism.Commands;
 	using System.Collections.Generic;
 	using System.Collections.Immutable;
 	using System.ComponentModel;
-
+	using System.Windows.Input;
 	using static Eternity.WpfApp.CanvasItemExtensions;
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
@@ -23,8 +24,10 @@
 		} = Enumerable.Empty<CanvasItem>();
 
 
+		public ICommand GenerateRandomCommand => new DelegateCommand(GenerateRandom);
 
-		private async void LoadImages()
+
+		private async void GenerateRandom()
 		{
 			var puzzleEnvironment = await PuzzleEnvironment.Generate();
 
@@ -56,7 +59,7 @@
 
 		public MainWindowViewModel()
 		{
-			LoadImages();
+			GenerateRandom();
 		}
 	}
 }

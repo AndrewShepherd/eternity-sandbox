@@ -10,9 +10,12 @@
 	<Window.Resources>
 		<local:MainWindowViewModel x:Key="MainWindowViewModel" />
 	</Window.Resources>
-    <Grid DataContext="{StaticResource MainWindowViewModel}"
-		Width="{Binding Mode=OneWayToSource, Path=GridWidth}">
-		<ItemsControl ItemsSource="{Binding CanvasItems}">
+    <Grid DataContext="{StaticResource MainWindowViewModel}">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="Auto" />
+		</Grid.ColumnDefinitions>
+		<ItemsControl ItemsSource="{Binding CanvasItems}" Grid.Column="0">
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
 					<Canvas />
@@ -34,5 +37,10 @@
 				</Style>
 			</ItemsControl.ItemContainerStyle>
 		</ItemsControl>
+		<StackPanel Orientation="Vertical" Grid.Column="1">
+			<Button Command="{Binding GenerateRandomCommand}">
+				Random
+			</Button>
+		</StackPanel>
 	</Grid>
 </Window>
