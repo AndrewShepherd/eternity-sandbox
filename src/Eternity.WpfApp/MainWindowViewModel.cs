@@ -2,10 +2,13 @@
 {
 	using Prism.Commands;
 	using System.Collections.Generic;
-	using System.Collections.Immutable;
 	using System.ComponentModel;
+	using System.Reactive.Subjects;
+	using System.Reactive.Linq;
 	using System.Windows.Input;
 	using static Eternity.WpfApp.CanvasItemExtensions;
+	using System.Reactive.Threading.Tasks;
+
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
 		PropertyChangedEventHandler? _propertyChangedEventHandler;
@@ -27,16 +30,13 @@
 		public ICommand GenerateRandomCommand => new DelegateCommand(GenerateRandom);
 
 
-		private async void GenerateRandom()
+		private static IEnumerable<Placement> GenerateListPlacements(
+			PuzzleEnvironment puzzleEnvironment, 
+			int[] pieceIndexes
+		)
 		{
-			var puzzleEnvironment = await PuzzleEnvironment.Generate();
-
-			var sequence = Sequence.GenerateRandomSequence();
-
-			var pieceIndexes = Sequence.GeneratePieceIndexes(sequence);
-
-			List<Placement> l = new List<Placement>();
-			for(int i = 0; i < pieceIndexes.Length; ++i)
+			List<Placement> listPlacements = new List<Placement>();
+			for (int i = 0; i < pieceIndexes.Length; ++i)
 			{
 				var pieceIndex = pieceIndexes[i];
 				var position = puzzleEnvironment.PositionLookup[i];
@@ -44,22 +44,43 @@
 
 				var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
 					puzzleEnvironment,
-					l,
+					listPlacements,
 					i
 				);
 				IEnumerable<Rotation> rotations = PuzzleSolver.GetRotations(sides, edgeRequirements);
 
-				l.Add(new Placement(pieceIndex, rotations.FirstOrDefault()));
+				listPlacements.Add(new Placement(pieceIndex, rotations.FirstOrDefault()));
 			}
-			this.CanvasItems = GenerateCanvasItems(puzzleEnvironment, l);
-			this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
+			return listPlacements;
+		}
+
+		private void GenerateRandom()
+		{
+			this._sequence.OnNext(Sequence.GenerateRandomSequence());
 		}
 
 
+		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.GenerateRandomSequence());
 
 		public MainWindowViewModel()
 		{
-			GenerateRandom();
+			var puzzleEnvironmentObservable = PuzzleEnvironment.Generate().ToObservable();
+
+			var canvasItemObservable =
+				from pieceIndexes in (from s in _sequence select Sequence.GeneratePieceIndexes(s))
+				from puzzleEnvironment in puzzleEnvironmentObservable
+				let listPlacements = GenerateListPlacements(puzzleEnvironment, pieceIndexes)
+				select GenerateCanvasItems(puzzleEnvironment, listPlacements);
+
+			canvasItemObservable.Subscribe(
+				canvasItems =>
+				{
+					this.CanvasItems = canvasItems;
+					this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
+				}
+			);
+
+			
 		}
 	}
 }
