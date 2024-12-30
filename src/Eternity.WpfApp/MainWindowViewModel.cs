@@ -57,6 +57,80 @@
 			);
 		}
 
+		private static Rotation[] GetPossibleRotations(
+			PuzzleEnvironment puzzleEnvironment,
+			int positionIndex,
+			int pieceIndex,
+			Placement?[] listPlacements
+		)
+		{
+			var sides = puzzleEnvironment.PieceSides[pieceIndex];
+			var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
+				puzzleEnvironment,
+				listPlacements,
+				positionIndex
+			);
+			return edgeRequirements.SelectMany(
+				er => PuzzleSolver.GetRotations(sides, er)
+			).ToArray();
+		}
+
+		private static Placement?[]? TryAddPiece(
+			PuzzleEnvironment puzzleEnvironment,
+			Placement?[] existingPlacements,
+			int positionIndex,
+			int pieceIndex
+			)
+		{
+			var listPlacements = new Placement?[existingPlacements.Length];
+			existingPlacements.CopyTo(listPlacements, 0);
+				
+			var rotations = GetPossibleRotations(
+				puzzleEnvironment,
+				positionIndex,
+				pieceIndex,
+				listPlacements
+			);
+			if (rotations.Length == 0)
+			{
+				return null;
+			}
+			listPlacements[positionIndex] = new Placement(pieceIndex, rotations);
+
+			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, positionIndex)
+				.Where(pi => listPlacements[pi] != null && listPlacements[pi]!.Rotations.Length > 1)
+				.ToArray();
+			if (adjacentPlacementIndexes.Length > 0)
+			{
+				foreach (var adjacentPlacementIndex in adjacentPlacementIndexes)
+				{
+					var thisPlacement = listPlacements[adjacentPlacementIndex];
+					if (thisPlacement == null)
+					{
+						throw new Exception("This cannot have happend");
+					}
+					var thisRotations = GetPossibleRotations(
+						puzzleEnvironment,
+						adjacentPlacementIndex,
+						thisPlacement.PieceIndex,
+						listPlacements
+					);
+					if (thisRotations.Length == 0)
+					{
+						throw new Exception("After placing a piece, an existing piece was in an illegal state");
+					}
+					if (thisRotations.Length < thisPlacement.Rotations.Length)
+					{
+						listPlacements[adjacentPlacementIndex] = new Placement(
+							thisPlacement.PieceIndex,
+							thisRotations
+						);
+					}
+				}
+			}
+			return listPlacements;
+		}
+
 		private static (Placement?[], int?) TryGenerateListPlacements(
 			PuzzleEnvironment puzzleEnvironment,
 			int[] pieceIndexes
@@ -64,66 +138,20 @@
 		{
 			Placement?[] listPlacements = new Placement?[256];
 			int? firstFailedIndex = default;
-			for (int i = 0; i < pieceIndexes.Length; ++i)
+			for (int positionIndex = 0; positionIndex < pieceIndexes.Length; ++positionIndex)
 			{
-				var pieceIndex = pieceIndexes[i];
-				var position = puzzleEnvironment.PositionLookup[i];
-				var sides = puzzleEnvironment.PieceSides[pieceIndex];
-
-				var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
+				var pieceIndex = pieceIndexes[positionIndex];
+				Placement?[]? newPlacements = TryAddPiece(
 					puzzleEnvironment,
 					listPlacements,
-					i
+					positionIndex,
+					pieceIndex
 				);
-				var rotations = edgeRequirements.SelectMany(
-					er => PuzzleSolver.GetRotations(sides, er)
-				).ToArray();
-				if (rotations.Length == 0)
+				if (newPlacements == null)
 				{
-					firstFailedIndex = firstFailedIndex ?? i;
-					return (listPlacements, firstFailedIndex);
+					return (listPlacements, positionIndex);
 				}
-				listPlacements[i] = new Placement(pieceIndex, rotations);
-				// TODO: Get the adjacent placements
-				// Do any of them have more than one possible rotation?
-				// If so, check if they STILL have more than one possible rotation
-				// after placing this piece
-				var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, i)
-					.Where(pi => listPlacements[pi] != null && listPlacements[pi]!.Rotations.Length > 1)
-					.ToArray();
-				if (adjacentPlacementIndexes.Length > 0)
-				{
-					foreach(var adjacentPlacementIndex in adjacentPlacementIndexes)
-					{
-						var thisPlacement = listPlacements[adjacentPlacementIndex];
-						if (thisPlacement == null)
-						{
-							throw new Exception("This cannot have happend");
-						}
-						var thisEdgeRequirements = PuzzleSolver.GetEdgeRequirements(
-							puzzleEnvironment,
-							listPlacements,
-							adjacentPlacementIndex
-						);
-						var thisSides = puzzleEnvironment.PieceSides[thisPlacement.PieceIndex];
-						var thisRotations = thisEdgeRequirements.SelectMany(
-							er => PuzzleSolver.GetRotations(thisSides, er)
-						).ToArray();
-						if (thisRotations.Length == 0)
-						{
-							throw new Exception("After placing a piece, an existing piece was in an illegal state");
-						}
-						if (thisRotations.Length < thisPlacement.Rotations.Length)
-						{
-							listPlacements[adjacentPlacementIndex] = new Placement(
-								thisPlacement.PieceIndex,
-								thisRotations
-							);
-						}
-					}
-				}
-
-
+				listPlacements = newPlacements;
 			}
 			return (listPlacements, firstFailedIndex);
 
