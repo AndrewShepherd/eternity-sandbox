@@ -12,8 +12,8 @@
 	</Window.Resources>
     <Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*" />
-			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="3*" />
+			<ColumnDefinition Width="2*" />
 		</Grid.ColumnDefinitions>
 		<ItemsControl ItemsSource="{Binding CanvasItems}" Grid.Column="0">
 			<ItemsControl.ItemsPanel>
@@ -45,7 +45,8 @@
 				Search
 			</Button>
 			<TextBlock Text="{Binding SequenceAsString}" TextWrapping="WrapWithOverflow"
-					   Width="200" />
+					   FontSize="16" FontFamily="Courier New"
+					    />
 		</StackPanel>
 	</Grid>
 </Window>

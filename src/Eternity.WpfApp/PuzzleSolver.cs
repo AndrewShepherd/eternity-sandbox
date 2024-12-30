@@ -28,89 +28,91 @@ namespace Eternity.WpfApp
 			return result.ToImmutableArray();
 		}
 
+		private static IEnumerable<Position> GetAdjacentPositions(Position p)
+		{
+			if (p.X > 0)
+			{
+				yield return new Position(p.X - 1, p.Y);
+			}
+			if (p.Y > 0)
+			{
+				yield return new Position(p.X, p.Y - 1);
+			}
+			if (p.X < 15)
+			{
+				yield return new Position(p.X + 1, p.Y);
+			}
+			if (p.Y < 15)
+			{
+				yield return new Position(p.X, p.Y + 1);
+			}
+		}
 
-		private static int? GetAdjacentSideColor(
+		public static IEnumerable<int> GetAdjacentPlacementIndexes(PuzzleEnvironment puzzleEnvironment, int placementIndex)
+		{
+			var thisPosition = puzzleEnvironment.PositionLookup[placementIndex];
+			return GetAdjacentPositions(thisPosition)
+				.Select(p => puzzleEnvironment.ReversePositionLookup[p]);
+		}
+
+		private static IEnumerable<int?> GetAdjacentSideColor(
 			PuzzleEnvironment puzzleEnvironment,
 			Position position,
-			List<Placement> existingPlacements,
+			Placement?[] existingPlacements,
 			int edgeIndex
 		)
 		{
 			if (puzzleEnvironment.ReversePositionLookup.TryGetValue(position, out var placementIndex))
 			{
-				if (placementIndex <= existingPlacements.Count)
+				var adjacentPlacement = existingPlacements[placementIndex];
+				if (adjacentPlacement != null)
 				{
-					var topPlacement = existingPlacements[placementIndex];
-					var topColors = puzzleEnvironment.PieceSides[topPlacement.PieceIndex];
-					var topColorsRotated = Rotate(topColors, topPlacement.Rotation);
-					return topColorsRotated[edgeIndex];
+					var adjacentColors = puzzleEnvironment.PieceSides[adjacentPlacement.PieceIndex];
+					return adjacentPlacement.Rotations.Select(
+						r => Rotate(adjacentColors, r)
+					).Select(topColorsRotated => topColorsRotated[edgeIndex])
+					.Select(n => (int?)n);
 				}
 			}
-			return default;
+			return [default];
 		}
 
-		public static EdgeRequirements GetEdgeRequirements(
+		public static IEnumerable<EdgeRequirements> GetEdgeRequirements(
 			PuzzleEnvironment puzzleEnvironment,
-			List<Placement> existingPlacements,
+			Placement?[] existingPlacements,
 			int targetPositionIndex
 		)
 		{
-			Func<Position, int, int?> getAdjacentSideColor = (position, edgeIndex) => GetAdjacentSideColor(
+			Func<int, int, int, IEnumerable<int?>> getAdjacentSideColor = (x, y, edgeIndex) => GetAdjacentSideColor(
 				puzzleEnvironment,
-				position,
+				new Position(x, y),
 				existingPlacements,
 				edgeIndex
 			);
 			var target = puzzleEnvironment.PositionLookup[targetPositionIndex];
-			int? topColor = null;
-			int? leftColor = null;
-			int? rightColor = null;
-			int? bottomColor = null;
-			if (target.Y == 0)
-			{
-				topColor = 23;
-			}
-			else
-			{
-				topColor = getAdjacentSideColor(
-					new Position(target.X, target.Y - 1),
-					EdgeIndexes.Bottom
-				);
-			}
-			if (target.X == 0)
-			{
-				leftColor = 23;
-			}
-			else
-			{
-				leftColor = getAdjacentSideColor(
-					new Position(target.X - 1, target.Y),
-					EdgeIndexes.Right
-				);
-			}
-			if (target.X == 15)
-			{
-				rightColor = 23;
-			}
-			else
-			{
-				rightColor = getAdjacentSideColor(
-					new Position(target.X + 1, target.Y),
-					EdgeIndexes.Left
-				);
-			}
-			if (target.Y == 15)
-			{
-				bottomColor = 23;
-			}
-			else
-			{
-				bottomColor = getAdjacentSideColor(
-					new Position(target.X, target.Y+1),
-					EdgeIndexes.Top
-				);
-			}
-			return new EdgeRequirements(leftColor, topColor, rightColor, bottomColor);
+
+			IEnumerable<int?> edgeColor = [23];
+
+			var topColors = (target.Y == 0)
+				? edgeColor
+				: getAdjacentSideColor(target.X, target.Y - 1, EdgeIndexes.Bottom);
+			var leftColors = (target.X == 0)
+				? edgeColor
+				: getAdjacentSideColor(target.X - 1, target.Y, EdgeIndexes.Right);
+			var rightColors = (target.X == 15)
+				? edgeColor
+				: getAdjacentSideColor(target.X + 1, target.Y, EdgeIndexes.Left);
+			var bottomColors = (target.Y == 15)
+				? edgeColor
+				: getAdjacentSideColor(target.X, target.Y + 1, EdgeIndexes.Top);
+
+			IEnumerable<EdgeRequirements> edgeRequirements =
+				from leftColor in leftColors
+				from topColor in topColors
+				from rightColor in rightColors
+				from bottomColor in bottomColors
+				select new EdgeRequirements(leftColor, topColor, rightColor, bottomColor);
+			return edgeRequirements;
 		}
 
 		internal static bool CanMatch(int? n1, int? n2) =>

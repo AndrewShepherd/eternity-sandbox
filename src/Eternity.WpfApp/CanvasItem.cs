@@ -31,15 +31,22 @@ namespace Eternity.WpfApp
 					ImageSource = environment.Images[placement.PieceIndex],
 					Left = position.X * imageWidth,
 					Top = position.Y * imageHeight,
-					Rotation = (int)placement.Rotation * 90,
+					Rotation = (int)placement.Rotations[0] * 90,
 				};
 			};
 		} 
 
-		internal static IEnumerable<CanvasItem> GenerateCanvasItems(PuzzleEnvironment environment, IEnumerable<Placement> placements)
+		internal static IEnumerable<CanvasItem> GenerateCanvasItems(PuzzleEnvironment environment, Placement?[] placements)
 		{
 			var g = CreateCanvasItemGenerator(environment);
-			return placements.Select(g).ToList();
+			for(int i = 0; i < placements.Length; ++i)
+			{
+				var item = placements[i];
+				if (item != null)
+				{
+					yield return g(item, i);
+				}
+			}
 		}
 	}
 }
