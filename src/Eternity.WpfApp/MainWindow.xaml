@@ -12,8 +12,8 @@
 	</Window.Resources>
     <Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="4*" />
 			<ColumnDefinition Width="3*" />
-			<ColumnDefinition Width="2*" />
 		</Grid.ColumnDefinitions>
 		<ItemsControl ItemsSource="{Binding CanvasItems}" Grid.Column="0">
 			<ItemsControl.ItemsPanel>
@@ -21,15 +21,23 @@
 					<Canvas />
 				</ItemsPanelTemplate>
 			</ItemsControl.ItemsPanel>
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
+			<ItemsControl.Resources>
+				<DataTemplate DataType="{x:Type local:CanvasPieceItem}">
 					<Image Source="{Binding ImageSource}" RenderTransformOrigin="0.5, 0.5">
 						<Image.RenderTransform>
 							<RotateTransform Angle="{Binding Rotation}" />
 						</Image.RenderTransform>
 					</Image>
 				</DataTemplate>
-			</ItemsControl.ItemTemplate>
+				<DataTemplate DataType="{x:Type local:CanvasHighlightItem}">
+					<Rectangle
+						Width="{Binding Width}"
+						Height="{Binding Height}"
+						Stroke="Yellow"
+						StrokeThickness="4"
+						/>
+				</DataTemplate>
+			</ItemsControl.Resources>
 			<ItemsControl.ItemContainerStyle>
 				<Style TargetType="ContentPresenter">
 					<Setter Property="Canvas.Left" Value="{Binding Left}" />
@@ -44,10 +52,31 @@
 			<Button Command="{Binding TryNextCommand}">
 				Search
 			</Button>
-			<TextBlock Text="{Binding SequenceAsString}" TextWrapping="WrapWithOverflow"
+			<ListView 
+				ItemsSource="{Binding SequenceListEntries}"
+				SelectedIndex="{Binding Mode=OneWayToSource, Path=SelectedSequenceIndex}"
+			>
+				<ListView.ItemsPanel>
+					<ItemsPanelTemplate>
+						<UniformGrid Columns="16" />
+					</ItemsPanelTemplate>
+				</ListView.ItemsPanel>
+				<ListView.ItemTemplate>
+					<DataTemplate>
+						<TextBlock 
+							FontSize="16"
+							FontFamily="Courier New"
+							TextAlignment="Right"
+							HorizontalAlignment="Stretch"
+							Text="{Binding ValueAsHex}" />
+					</DataTemplate>
+				</ListView.ItemTemplate>
+			</ListView>
+			<TextBlock Text="{Binding SelectedSequenceIndex}" 
 					   FontSize="16" FontFamily="Courier New"
+					   HorizontalAlignment="Center"
 					    />
-			<TextBlock Text="{Binding Path=CanvasItems.Length}" FontSize="30" HorizontalAlignment="Center" />
+
 		</StackPanel>
 	</Grid>
 </Window>

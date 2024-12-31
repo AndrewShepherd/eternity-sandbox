@@ -6,7 +6,11 @@ namespace Eternity.WpfApp
 	using System.Windows.Media;
 	using System.Windows.Media.Imaging;
 
-	public class CanvasItem
+	public abstract class CanvasItem
+	{
+	}
+
+	public class CanvasPieceItem : CanvasItem
 	{
 		public BitmapImage? ImageSource { get; set; }
 
@@ -15,9 +19,19 @@ namespace Eternity.WpfApp
 		public int Rotation { get; internal set; }
 	}
 
+	public sealed class CanvasHighlightItem : CanvasItem
+	{
+		public double Top { get; set; }
+		public double Left { get; set; }
+
+		public double Width { get; set; }
+
+		public double Height { get; set; }
+	}
+
 	public static class CanvasItemExtensions
 	{
-		internal static Func<Placement, int, CanvasItem> CreateCanvasItemGenerator(
+		internal static Func<Placement, int, CanvasPieceItem> CreateCanvasItemGenerator(
 			PuzzleEnvironment environment,
 			IReadOnlyList<BitmapImage> images
 		)
@@ -28,7 +42,7 @@ namespace Eternity.WpfApp
 			return (placement, index) =>
 			{
 				var position = environment.PositionLookup[index];
-				return new CanvasItem
+				return new CanvasPieceItem
 				{
 					ImageSource = images[placement.PieceIndex],
 					Left = position.X * imageWidth,
@@ -38,7 +52,7 @@ namespace Eternity.WpfApp
 			};
 		} 
 
-		internal static IEnumerable<CanvasItem> GenerateCanvasItems(
+		internal static IEnumerable<CanvasPieceItem> GenerateCanvasItems(
 			PuzzleEnvironment environment, 
 			IReadOnlyList<BitmapImage> images,
 			Placement?[] placements)

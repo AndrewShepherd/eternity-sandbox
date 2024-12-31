@@ -12,6 +12,7 @@
 	using System.IO;
 	using System.Windows.Media.Imaging;
 	using System.Collections.Immutable;
+	using System.Collections.ObjectModel;
 
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
@@ -147,19 +148,20 @@
 				return null;
 			}
 
-			var listPlacements = new Placement?[existingPlacements.Length];
-			existingPlacements.CopyTo(listPlacements, 0);
-				
 			var rotations = PuzzleSolver.GetPossibleRotations(
 				puzzleEnvironment,
 				positionIndex,
 				pieceIndex,
-				listPlacements
+				existingPlacements
 			);
+
 			if (rotations.Length == 0)
 			{
 				return null;
 			}
+
+			var listPlacements = new Placement?[existingPlacements.Length];
+			existingPlacements.CopyTo(listPlacements, 0);
 			listPlacements[positionIndex] = new Placement(pieceIndex, rotations);
 			placedPieceIndexes[pieceIndex] = true;
 
@@ -283,13 +285,7 @@
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
 
-		private static string AsTwoDigitHex(int n)
-		{
-			var unpaddedHex = $"{n:X}";
-			return unpaddedHex.Length == 1 ? $"0{unpaddedHex}" : unpaddedHex;
-		}
-		private static string SequenceToString(IEnumerable<int> sequence) =>
-			string.Join(' ', sequence.Select(AsTwoDigitHex));
+
 
 		public string SequenceAsString { get; set; } = string.Empty;
 
@@ -305,6 +301,22 @@
 			return bitmap;
 		}
 
+		public ObservableCollection<SequenceListEntry> SequenceListEntries { get; set; }
+
+		private int _selectedSequenceIndex = -1;
+		public int SelectedSequenceIndex
+		{
+			get => _selectedSequenceIndex;
+			set
+			{
+				if (_selectedSequenceIndex != value)
+				{
+					_selectedSequenceIndex = value;
+					_propertyChangedEventHandler?.Invoke(this, new (nameof(SelectedSequenceIndex)));
+				}
+			}
+		}
+
 		private async void SetUpObservables()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
@@ -315,9 +327,12 @@
 						return CreateFromStream(stream!);
 				}
 			).ToImmutableList();
+			var bitmapWidth = bitmapImages[0].Width;
+			var bitmapHeight = bitmapImages[0].Height;
 
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
 			_placements.Sample(TimeSpan.FromSeconds(0.25))
+				.ObserveOn(SynchronizationContext.Current!)
 				.Subscribe(
 					listPlacements =>
 					{
@@ -325,18 +340,44 @@
 							puzzleEnvironment,
 							bitmapImages,
 							listPlacements
-						).ToArray();
+						).Cast<CanvasItem>().ToList();
+						
+						if (SelectedSequenceIndex >= 0)
+						{
+							var highlightedPositionIndexes = Sequence.SequenceIndexToPositionIndexes(SelectedSequenceIndex);
+							var highlightedPositions = highlightedPositionIndexes
+								.Select(i => puzzleEnvironment.PositionLookup[i])
+								.ToArray();
+							foreach(var position in highlightedPositions)
+							{
+								canvasItems.Add(
+									new CanvasHighlightItem
+									{
+										Top = position.Y * bitmapHeight,
+										Left = position.X * bitmapWidth,
+										Width = bitmapWidth,
+										Height = bitmapHeight,
+									}
+								);
+							}
+						}
 						this.CanvasItems = canvasItems;
+
 						this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
-						Debug.WriteLine($"{DateTime.Now.ToLongTimeString()} - converting sequence to canvas items. Item Count: {canvasItems.Length}");
 					}
 				);
 			_sequence
 				.Sample(TimeSpan.FromSeconds(0.1))
+				.ObserveOn(SynchronizationContext.Current!)
 				.Subscribe(
 					sequence =>
 					{
-						this.SequenceAsString = SequenceToString(sequence);
+						for (int i = 0; i < sequence.Length; i++)
+						{
+							this.SequenceListEntries[i].Value = sequence[i];
+						}
+						this.SequenceAsString = SequenceListEntry.SequenceToString(sequence);
+
 						this._propertyChangedEventHandler?.Invoke(this, new(nameof(SequenceAsString)));
 					}
 				);
@@ -350,7 +391,9 @@
 		public MainWindowViewModel()
 		{
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
-
+			this.SequenceListEntries = new ObservableCollection<SequenceListEntry>(
+				Sequence.Dimensions.Select(d => new SequenceListEntry { Value = 0 })
+			);
 			SetUpObservables();
 
 		}

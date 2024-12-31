@@ -77,6 +77,15 @@
 				< 60 => listPlacementIndex - 3,
 				_ => listPlacementIndex - 4
 			};
+
+		public static int[] SequenceIndexToPositionIndexes(int sequenceIndex) =>
+			sequenceIndex switch
+			{
+				0 => [0, 1, 2, 3],
+				> 0 and < 55 => [sequenceIndex + 3],
+				55 => [sequenceIndex + 3, sequenceIndex + 4],
+				_ => [sequenceIndex + 4]
+			};
 		public static IEnumerable<int> GeneratePieceIndexes(IReadOnlyList<int> sequence)
 		{
 			var cornerPermutation = CornerPermutations[sequence[0]];
