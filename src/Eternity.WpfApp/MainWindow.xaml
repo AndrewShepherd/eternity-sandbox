@@ -47,6 +47,7 @@
 			<TextBlock Text="{Binding SequenceAsString}" TextWrapping="WrapWithOverflow"
 					   FontSize="16" FontFamily="Courier New"
 					    />
+			<TextBlock Text="{Binding Path=CanvasItems.Length}" FontSize="30" HorizontalAlignment="Center" />
 		</StackPanel>
 	</Grid>
 </Window>

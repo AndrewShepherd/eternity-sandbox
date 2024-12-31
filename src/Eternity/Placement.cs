@@ -1,4 +1,8 @@
 ﻿namespace Eternity
 {
-	public record class Placement(int PieceIndex, Rotation[] Rotations);
+	public class Placement(int pieceIndex, Rotation[] rotations)
+	{
+		public int PieceIndex => pieceIndex;
+		public Rotation[] Rotations => rotations;
+	}
 }

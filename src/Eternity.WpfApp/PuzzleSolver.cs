@@ -136,6 +136,24 @@ namespace Eternity.WpfApp
 			Rotation.TwoSeventy
 		];
 
+		internal static Rotation[] GetPossibleRotations(
+			PuzzleEnvironment puzzleEnvironment,
+			int positionIndex,
+			int pieceIndex,
+			Placement?[] listPlacements
+		)
+		{
+			var sides = puzzleEnvironment.PieceSides[pieceIndex];
+			var edgeRequirements = GetEdgeRequirements(
+				puzzleEnvironment,
+				listPlacements,
+				positionIndex
+			);
+			return edgeRequirements.SelectMany(
+				er => GetRotations(sides, er)
+			).ToArray();
+		}
+
 		internal static IEnumerable<Rotation> GetRotations(
 			ImmutableArray<int> sides,
 			EdgeRequirements edgeRequirements

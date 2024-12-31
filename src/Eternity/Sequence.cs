@@ -77,14 +77,13 @@
 				< 60 => listPlacementIndex - 3,
 				_ => listPlacementIndex - 4
 			};
-		public static int[] GeneratePieceIndexes(IReadOnlyList<int> sequence)
+		public static IEnumerable<int> GeneratePieceIndexes(IReadOnlyList<int> sequence)
 		{
-			var result = new int[256];
 			var cornerPermutation = CornerPermutations[sequence[0]];
-			int i = 0;
-			for (; i < cornerPermutation.Length; ++i)
+
+			for (int i = 0; i < cornerPermutation.Length; ++i)
 			{
-				result[i] = cornerPermutation[i];
+				yield return cornerPermutation[i];
 			}
 			
 			var usedEdgePieces = new bool[NonCornerEdgePieceCount];
@@ -93,37 +92,25 @@
 				var available = Enumerable.Range(0, usedEdgePieces.Length)
 					.Where(n => !usedEdgePieces[n])
 					.ElementAt(unusedEdgePieceIndex);
-				result[i++] = available + 4;
+				yield return available + 4;
 				usedEdgePieces[available] = true;
 			}
 			for(int j = 0; j < usedEdgePieces.Length; ++j)
 			{
 				if (!usedEdgePieces[j])
 				{
-					result[i++] = j + 4;
+					yield return j + 4;
 					break;
 				}
 			}
 
-			var usedInnerPieces = new bool[InnerPieceCount];
+			var innerPieces = Enumerable.Range(0, InnerPieceCount).ToList();
 			foreach(var unusedInnerPieceIndex in sequence.Skip(1 + NonCornerEdgePieceCount - 1))
 			{
-				var available = Enumerable.Range(0, usedInnerPieces.Length)
-					.Where(n => !usedInnerPieces[n])
-					.ElementAt(unusedInnerPieceIndex);
-				result[i++] = available + 4 + NonCornerEdgePieceCount;
-				usedInnerPieces[available] = true;
+				yield return innerPieces[unusedInnerPieceIndex] + 4 + NonCornerEdgePieceCount;
+				innerPieces.RemoveAt(unusedInnerPieceIndex);
 			}
-			for(int j = 0; j < usedInnerPieces.Length; ++j)
-			{
-				if(!usedInnerPieces[j])
-				{
-					result[i++] = j + 4 + NonCornerEdgePieceCount;
-					break;
-				}
-			}
-
-			return result;
+			yield return innerPieces.First() + 4 + NonCornerEdgePieceCount;
 		}
 	}
 }
