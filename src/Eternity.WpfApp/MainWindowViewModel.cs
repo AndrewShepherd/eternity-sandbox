@@ -9,8 +9,6 @@
 	using static Eternity.WpfApp.CanvasItemExtensions;
 	using System.Reactive.Threading.Tasks;
 	using System.Diagnostics;
-	using System.Reactive.Concurrency;
-	using System.Collections.ObjectModel;
 	using System.IO;
 	using System.Windows.Media.Imaging;
 	using System.Collections.Immutable;
@@ -40,14 +38,14 @@
 
 		private record class StackEntry(int PieceIndex, Placement?[] Placements);
 
-		private void LoopUntilAnswerFound()
+		private void LoopUntilAnswerFound(CancellationToken cancellationToken)
 		{
 			var currentSequence = _sequence.Value;
 			var puzzleEnvironment = _generatePuzzleEnvironmentTask.Result;
 
 			var stackEntries = new StackEntry?[256];
 			var noPlacements = new Placement?[256];
-			while (true)
+			while (!cancellationToken.IsCancellationRequested)
 			{
 				IEnumerable<int> pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
 
@@ -105,10 +103,12 @@
 			}
 		}
 
+		CancellationTokenSource _loopCancellationToken = new CancellationTokenSource();
 		public void TryNext()
 		{
-			var thread = new System.Threading.Thread(new ThreadStart(
-				LoopUntilAnswerFound
+			var thread = new Thread(
+				new ThreadStart(
+					() => LoopUntilAnswerFound(_loopCancellationToken.Token)
 				)
 			);
 			thread.Priority = ThreadPriority.Lowest;
@@ -268,8 +268,6 @@
 					mustPerformSweep = true;
 				}
 			}
-			
-
 			return listPlacements;
 		}
 
@@ -307,8 +305,6 @@
 			return bitmap;
 		}
 
-
-
 		private async void SetUpObservables()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
@@ -344,6 +340,11 @@
 						this._propertyChangedEventHandler?.Invoke(this, new(nameof(SequenceAsString)));
 					}
 				);
+		}
+
+		internal void OnClosed()
+		{
+			this._loopCancellationToken.Cancel();
 		}
 
 		public MainWindowViewModel()

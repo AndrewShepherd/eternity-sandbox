@@ -20,5 +20,12 @@ namespace Eternity.WpfApp
 		{
 			InitializeComponent();
 		}
+
+		protected override void OnClosed(EventArgs e)
+		{
+			var viewModel = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
+			viewModel.OnClosed();
+			base.OnClosed(e);
+		}
 	}
 }
