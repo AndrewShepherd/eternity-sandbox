@@ -2,6 +2,7 @@
 namespace Eternity.WpfApp
 {
 	using System;
+	using System.Collections.Immutable;
 	using System.Windows.Media;
 	using System.Windows.Media.Imaging;
 
@@ -17,10 +18,11 @@ namespace Eternity.WpfApp
 	public static class CanvasItemExtensions
 	{
 		internal static Func<Placement, int, CanvasItem> CreateCanvasItemGenerator(
-			PuzzleEnvironment environment
+			PuzzleEnvironment environment,
+			IReadOnlyList<BitmapImage> images
 		)
 		{
-			var firstImage = environment.Images[0];
+			var firstImage = images[0];
 			var imageWidth = firstImage.Width;
 			var imageHeight = firstImage.Height;
 			return (placement, index) =>
@@ -28,7 +30,7 @@ namespace Eternity.WpfApp
 				var position = environment.PositionLookup[index];
 				return new CanvasItem
 				{
-					ImageSource = environment.Images[placement.PieceIndex],
+					ImageSource = images[placement.PieceIndex],
 					Left = position.X * imageWidth,
 					Top = position.Y * imageHeight,
 					Rotation = (int)placement.Rotations[0] * 90,
@@ -36,9 +38,12 @@ namespace Eternity.WpfApp
 			};
 		} 
 
-		internal static IEnumerable<CanvasItem> GenerateCanvasItems(PuzzleEnvironment environment, Placement?[] placements)
+		internal static IEnumerable<CanvasItem> GenerateCanvasItems(
+			PuzzleEnvironment environment, 
+			IReadOnlyList<BitmapImage> images,
+			Placement?[] placements)
 		{
-			var g = CreateCanvasItemGenerator(environment);
+			var g = CreateCanvasItemGenerator(environment, images);
 			for(int i = 0; i < placements.Length; ++i)
 			{
 				var item = placements[i];

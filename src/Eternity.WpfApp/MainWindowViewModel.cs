@@ -11,6 +11,9 @@
 	using System.Diagnostics;
 	using System.Reactive.Concurrency;
 	using System.Collections.ObjectModel;
+	using System.IO;
+	using System.Windows.Media.Imaging;
+	using System.Collections.Immutable;
 
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
@@ -292,14 +295,41 @@
 
 		public string SequenceAsString { get; set; } = string.Empty;
 
+
+		private static BitmapImage CreateFromStream(Stream stream)
+		{
+			var bitmap = new BitmapImage();
+			bitmap.BeginInit();
+			bitmap.StreamSource = stream;
+			bitmap.CacheOption = BitmapCacheOption.OnLoad;
+			bitmap.EndInit();
+			bitmap.Freeze();
+			return bitmap;
+		}
+
+
+
 		private async void SetUpObservables()
 		{
+			var pieces = await PuzzleProvider.LoadPieces();
+			var bitmapImages = pieces.Select(
+				p =>
+				{
+					using (var stream = ImageProvider.Load(p.ImageId))
+						return CreateFromStream(stream!);
+				}
+			).ToImmutableList();
+
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
 			_placements.Sample(TimeSpan.FromSeconds(0.25))
 				.Subscribe(
 					listPlacements =>
 					{
-						var canvasItems = GenerateCanvasItems(puzzleEnvironment, listPlacements).ToArray();
+						var canvasItems = GenerateCanvasItems(
+							puzzleEnvironment,
+							bitmapImages,
+							listPlacements
+						).ToArray();
 						this.CanvasItems = canvasItems;
 						this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
 						Debug.WriteLine($"{DateTime.Now.ToLongTimeString()} - converting sequence to canvas items. Item Count: {canvasItems.Length}");

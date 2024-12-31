@@ -1,40 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
-
-using System.Collections.Immutable;
-using System.IO;
-
-namespace Eternity.WpfApp
+﻿namespace Eternity.WpfApp
 {
+	using System.Collections.Immutable;
+
 	public class PuzzleEnvironment
 	{
 		private PuzzleEnvironment()
 		{
 		}
 
-		public ImmutableArray<BitmapImage> Images 
-		{ 
-			get;
-			private init;
-		}
-
-		public ImmutableArray<Position> PositionLookup
+		public IReadOnlyList<Position> PositionLookup
 		{
 			get;
 			private init;
-		}
+		} = [];
 
-		public ImmutableDictionary<Position, int> ReversePositionLookup
+		public IReadOnlyDictionary<Position, int> ReversePositionLookup
 		{
 			get;
 			private init;
 		} = ImmutableDictionary<Position, int>.Empty;
 
-		public ImmutableArray<ImmutableArray<int>> PieceSides;
+		public IReadOnlyList<ImmutableArray<int>> PieceSides = [];
 
 		private static Position[] GeneratePositions()
 		{
@@ -90,27 +76,9 @@ namespace Eternity.WpfApp
 			return rv;
 		}
 
-		private static BitmapImage CreateFromStream(Stream stream)
-		{
-			var bitmap = new BitmapImage();
-			bitmap.BeginInit();
-			bitmap.StreamSource = stream;
-			bitmap.CacheOption = BitmapCacheOption.OnLoad;
-			bitmap.EndInit();
-			bitmap.Freeze();
-			return bitmap;
-		}
-
 		public static async Task<PuzzleEnvironment> Generate()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
-			var bitmapImages = pieces.Select(
-				p =>
-				{
-					using (var stream = ImageProvider.Load(p.ImageId))
-						return CreateFromStream(stream!);
-				}
-			);
 
 			var positionLookup = GeneratePositions();
 			var reversePositionLookup = positionLookup.Select(
@@ -121,7 +89,6 @@ namespace Eternity.WpfApp
 			{
 				PositionLookup = positionLookup.ToImmutableArray(),
 				ReversePositionLookup = reversePositionLookup.ToImmutableDictionary(),
-				Images = bitmapImages.ToImmutableArray(),
 				PieceSides = pieces.Select(p => p.Sides).Select(s => s.ToImmutableArray()).ToImmutableArray(),
 			};
 		}
