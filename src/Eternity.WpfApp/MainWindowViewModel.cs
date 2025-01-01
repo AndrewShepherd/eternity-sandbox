@@ -37,7 +37,7 @@
 		public ICommand TryNextCommand => new DelegateCommand(TryNext);
 
 
-		private record class StackEntry(int PieceIndex, Placement?[] Placements);
+		private record class StackEntry(int PieceIndex, Placements Placements);
 
 		private void LoopUntilAnswerFound(CancellationToken cancellationToken)
 		{
@@ -45,14 +45,13 @@
 			var puzzleEnvironment = _generatePuzzleEnvironmentTask.Result;
 
 			var stackEntries = new StackEntry?[256];
-			var noPlacements = new Placement?[256];
 			while (!cancellationToken.IsCancellationRequested)
 			{
 				IEnumerable<int> pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
 
 				// Find the stack entry that matches this
 				var matchingStackEntryIndex = -1;
-				var matchingPlacements = noPlacements;
+				var matchingPlacements = Placements.Empty;
 
 				var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
 
@@ -124,34 +123,26 @@
 			thread.Start();
 		}
 
-		private static Placement?[]? TryAddPiece(
+		private static Placements? TryAddPiece(
 			PuzzleEnvironment puzzleEnvironment,
-			IReadOnlyList<Placement?> existingPlacements,
+			Placements listPlacements,
 			int positionIndex,
 			int pieceIndex
 			)
 		{
-			var pieceIndexAlredyThere = existingPlacements[positionIndex]?.PieceIndex;
+			var pieceIndexAlredyThere = listPlacements.Values[positionIndex]?.PieceIndex;
 			if (pieceIndexAlredyThere != null)
 			{
 				if (pieceIndexAlredyThere == pieceIndex)
 				{
-					return existingPlacements.ToArray();
+					return listPlacements;
 				}
 				else
 				{
 					return null;
 				}
 			}
-			bool[] placedPieceIndexes = new bool[256];
-			foreach(var p in existingPlacements)
-			{
-				if (p != null)
-				{
-					placedPieceIndexes[p.PieceIndex] = true;
-				}
-			}
-			if (placedPieceIndexes[pieceIndex])
+			if (listPlacements.ContainsPieceIndex(pieceIndex))
 			{
 				return null;
 			}
@@ -160,7 +151,7 @@
 				puzzleEnvironment,
 				positionIndex,
 				pieceIndex,
-				existingPlacements.ToArray()
+				listPlacements.Values
 			);
 
 			if (rotations.Length == 0)
@@ -168,22 +159,22 @@
 				return null;
 			}
 
-			var listPlacements = new Placement?[existingPlacements.Count];
-			existingPlacements.ToArray().CopyTo(listPlacements, 0);
-			listPlacements[positionIndex] = new Placement(pieceIndex, rotations);
-			placedPieceIndexes[pieceIndex] = true;
 
+			listPlacements = listPlacements.SetItem(positionIndex, new Placement(pieceIndex, rotations));
+	
 			// There may be existing placements which had multiple rotations
 			// as a result of placing this piece they may no longer have multiple
 			// rotations
 			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, positionIndex)
-				.Where(pi => listPlacements[pi] != null && listPlacements[pi]!.Rotations.Length > 1)
-				.ToArray();
+				.Where(
+					pi => listPlacements.Values[pi] != null 
+					&& listPlacements.Values[pi]!.Rotations.Length > 1
+				).ToArray();
 			if (adjacentPlacementIndexes.Length > 0)
 			{
 				foreach (var adjacentPlacementIndex in adjacentPlacementIndexes)
 				{
-					var thisPlacement = listPlacements[adjacentPlacementIndex];
+					var thisPlacement = listPlacements.Values[adjacentPlacementIndex];
 					if (thisPlacement == null)
 					{
 						throw new Exception("This cannot have happend");
@@ -192,7 +183,7 @@
 						puzzleEnvironment,
 						adjacentPlacementIndex,
 						thisPlacement.PieceIndex,
-						listPlacements
+						listPlacements.Values
 					);
 					if (thisRotations.Length == 0)
 					{
@@ -200,11 +191,13 @@
 					}
 					if (thisRotations.Length < thisPlacement.Rotations.Length)
 					{
-						listPlacements[adjacentPlacementIndex] = new Placement(
-							thisPlacement.PieceIndex,
-							thisRotations
+						listPlacements = listPlacements.SetItem(
+							adjacentPlacementIndex,
+							new (
+								thisPlacement.PieceIndex,
+								thisPlacement.Rotations
+							)
 						);
-						placedPieceIndexes[thisPlacement.PieceIndex] = true;
 					}
 				}
 			}
@@ -216,13 +209,13 @@
 			{
 				mustPerformSweep = false;
 				List<int> blanksWithAdjacentFills = [];
-				for (int posIndex = 0; posIndex < listPlacements.Length; ++posIndex)
+				for (int posIndex = 0; posIndex < listPlacements.Values.Count; ++posIndex)
 				{
-					if (listPlacements[posIndex] == null)
+					if (listPlacements.Values[posIndex] == null)
 					{
 						if (
 							PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, posIndex)
-								.Where(adj => listPlacements[adj] != null)
+								.Where(adj => listPlacements.Values[adj] != null)
 								.Any()
 						)
 						{
@@ -234,7 +227,7 @@
 				{
 					var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
 						puzzleEnvironment,
-						listPlacements,
+						listPlacements.Values,
 						blankPosIndex
 					);
 					// Work out, among all of the remaining pieces,
@@ -244,7 +237,7 @@
 					bool moreThanOne = false;
 					for(int candidatePieceIndex = 0; candidatePieceIndex < 256; ++candidatePieceIndex)
 					{
-						if (placedPieceIndexes[candidatePieceIndex])
+						if (listPlacements.ContainsPieceIndex(candidatePieceIndex))
 						{
 							continue;
 						}
@@ -273,8 +266,7 @@
 					{
 						return null;
 					}
-					listPlacements[blankPosIndex] = possiblePlacement;
-					placedPieceIndexes[possiblePlacement.PieceIndex] = true;
+					listPlacements = listPlacements.SetItem(blankPosIndex, possiblePlacement);
 					mustPerformSweep = true;
 				}
 			}
@@ -288,7 +280,7 @@
 
 
 		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.FirstSequence);
-		BehaviorSubject<Placement?[]> _placements = new BehaviorSubject<Placement?[]>([]);
+		BehaviorSubject<Placements> _placements = new BehaviorSubject<Placements>(Placements.Empty);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
@@ -398,7 +390,7 @@
 							bitmapWidth,
 							bitmapHeight,
 							bitmapImages,
-							t.Item1,
+							t.Item1.Values,
 							t.Item2
 						)
 			);

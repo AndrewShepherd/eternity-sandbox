@@ -58,7 +58,7 @@ namespace Eternity.WpfApp
 		private static IEnumerable<int?> GetAdjacentSideColor(
 			PuzzleEnvironment puzzleEnvironment,
 			Position position,
-			Placement?[] existingPlacements,
+			IReadOnlyList<Placement?> existingPlacements,
 			int edgeIndex
 		)
 		{
@@ -79,7 +79,7 @@ namespace Eternity.WpfApp
 
 		public static IEnumerable<EdgeRequirements> GetEdgeRequirements(
 			PuzzleEnvironment puzzleEnvironment,
-			Placement?[] existingPlacements,
+			IReadOnlyList<Placement?> existingPlacements,
 			int targetPositionIndex
 		)
 		{
@@ -140,7 +140,7 @@ namespace Eternity.WpfApp
 			PuzzleEnvironment puzzleEnvironment,
 			int positionIndex,
 			int pieceIndex,
-			Placement?[] listPlacements
+			IReadOnlyList<Placement?> listPlacements
 		)
 		{
 			var sides = puzzleEnvironment.PieceSides[pieceIndex];
