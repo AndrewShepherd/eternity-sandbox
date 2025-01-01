@@ -10,7 +10,7 @@ namespace Eternity.WpfApp
 
 	static class PuzzleSolver
     {
-		public static class EdgeIndexes
+		private static class EdgeIndexes
 		{
 			public const int Top = 0;
 			public const int Right = 1;
@@ -18,7 +18,7 @@ namespace Eternity.WpfApp
 			public const int Left = 3;
 		}
 
-		public static ImmutableArray<int> Rotate(ImmutableArray<int> edges, Rotation rotation)
+		private static ImmutableArray<int> Rotate(ImmutableArray<int> edges, Rotation rotation)
 		{
 			var result = new int[4];
 			for (int i = 0; i < edges.Length; i++)
@@ -48,7 +48,7 @@ namespace Eternity.WpfApp
 			}
 		}
 
-		public static IEnumerable<int> GetAdjacentPlacementIndexes(PuzzleEnvironment puzzleEnvironment, int placementIndex)
+		private static IEnumerable<int> GetAdjacentPlacementIndexes(PuzzleEnvironment puzzleEnvironment, int placementIndex)
 		{
 			var thisPosition = puzzleEnvironment.PositionLookup[placementIndex];
 			return GetAdjacentPositions(thisPosition)
@@ -58,13 +58,13 @@ namespace Eternity.WpfApp
 		private static IEnumerable<int?> GetAdjacentSideColor(
 			PuzzleEnvironment puzzleEnvironment,
 			Position position,
-			IReadOnlyList<Placement?> existingPlacements,
+			Placements existingPlacements,
 			int edgeIndex
 		)
 		{
 			if (puzzleEnvironment.ReversePositionLookup.TryGetValue(position, out var placementIndex))
 			{
-				var adjacentPlacement = existingPlacements[placementIndex];
+				var adjacentPlacement = existingPlacements.Values[placementIndex];
 				if (adjacentPlacement != null)
 				{
 					var adjacentColors = puzzleEnvironment.PieceSides[adjacentPlacement.PieceIndex];
@@ -77,9 +77,9 @@ namespace Eternity.WpfApp
 			return [default];
 		}
 
-		public static IEnumerable<EdgeRequirements> GetEdgeRequirements(
+		private static IEnumerable<EdgeRequirements> GetEdgeRequirements(
 			PuzzleEnvironment puzzleEnvironment,
-			IReadOnlyList<Placement?> existingPlacements,
+			Placements existingPlacements,
 			int targetPositionIndex
 		)
 		{
@@ -115,7 +115,7 @@ namespace Eternity.WpfApp
 			return edgeRequirements;
 		}
 
-		internal static bool CanMatch(int? n1, int? n2) =>
+		private static bool CanMatch(int? n1, int? n2) =>
 			(n1, n2) switch
 			{
 				(null, _) => true,
@@ -123,24 +123,24 @@ namespace Eternity.WpfApp
 				_ => n1 == n2
 			};
 
-		internal static bool CanMatch(EdgeRequirements r1, EdgeRequirements r2) =>
+		private static bool CanMatch(EdgeRequirements r1, EdgeRequirements r2) =>
 			CanMatch(r1.left, r2.left)
 			&& CanMatch(r1.right, r2.right)
 			&& CanMatch(r1.top, r2.top)
 			&& CanMatch(r1.bottom, r2.bottom);
 
-		static Rotation[] AllRotations = [
+		private static Rotation[] AllRotations = [
 			Rotation.None,
 			Rotation.Ninety,
 			Rotation.OneEighty,
 			Rotation.TwoSeventy
 		];
 
-		internal static Rotation[] GetPossibleRotations(
+		private static Rotation[] GetPossibleRotations(
 			PuzzleEnvironment puzzleEnvironment,
 			int positionIndex,
 			int pieceIndex,
-			IReadOnlyList<Placement?> listPlacements
+			Placements listPlacements
 		)
 		{
 			var sides = puzzleEnvironment.PieceSides[pieceIndex];
@@ -154,7 +154,7 @@ namespace Eternity.WpfApp
 			).ToArray();
 		}
 
-		internal static IEnumerable<Rotation> GetRotations(
+		private static IEnumerable<Rotation> GetRotations(
 			ImmutableArray<int> sides,
 			EdgeRequirements edgeRequirements
 		)
@@ -173,6 +173,172 @@ namespace Eternity.WpfApp
 					yield return rotation;
 				}
 			}
+		}
+
+		public static Placements? TryAddPiece(
+			PuzzleEnvironment puzzleEnvironment,
+			Placements listPlacements,
+			int positionIndex,
+			int pieceIndex
+			)
+		{
+			var pieceIndexAlredyThere = listPlacements.Values[positionIndex]?.PieceIndex;
+			if (pieceIndexAlredyThere != null)
+			{
+				if (pieceIndexAlredyThere == pieceIndex)
+				{
+					return listPlacements;
+				}
+				else
+				{
+					return null;
+				}
+			}
+			if (listPlacements.ContainsPieceIndex(pieceIndex))
+			{
+				return null;
+			}
+
+			var rotations = PuzzleSolver.GetPossibleRotations(
+				puzzleEnvironment,
+				positionIndex,
+				pieceIndex,
+				listPlacements
+			);
+
+			if (rotations.Length == 0)
+			{
+				return null;
+			}
+
+
+			listPlacements = listPlacements.SetItem(positionIndex, new Placement(pieceIndex, rotations));
+
+			// There may be existing placements which had multiple rotations
+			// as a result of placing this piece they may no longer have multiple
+			// rotations
+			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, positionIndex)
+				.Where(
+					pi => listPlacements.Values[pi] != null
+					&& listPlacements.Values[pi]!.Rotations.Length > 1
+				).ToArray();
+			if (adjacentPlacementIndexes.Length > 0)
+			{
+				foreach (var adjacentPlacementIndex in adjacentPlacementIndexes)
+				{
+					var thisPlacement = listPlacements.Values[adjacentPlacementIndex];
+					if (thisPlacement == null)
+					{
+						throw new Exception("This cannot have happend");
+					}
+					var newRotations = PuzzleSolver.GetPossibleRotations(
+						puzzleEnvironment,
+						adjacentPlacementIndex,
+						thisPlacement.PieceIndex,
+						listPlacements
+					);
+					if (newRotations.Length == 0)
+					{
+						throw new Exception("After placing a piece, an existing piece was in an illegal state");
+					}
+					if (newRotations.Length < thisPlacement.Rotations.Length)
+					{
+						listPlacements = listPlacements.SetItem(
+							adjacentPlacementIndex,
+							new(
+								thisPlacement.PieceIndex,
+								newRotations
+							)
+						);
+					}
+				}
+			}
+
+			// Perform a sweep. Get a list of all of the positions
+			// that are blank but have adjacent non-blank
+			bool mustPerformSweep = true;
+			while (mustPerformSweep)
+			{
+				mustPerformSweep = false;
+				List<int> blanksWithAdjacentFills = [];
+				for (int posIndex = 0; posIndex < listPlacements.Values.Count; ++posIndex)
+				{
+					if (listPlacements.Values[posIndex] == null)
+					{
+						if (
+							PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, posIndex)
+								.Where(adj => listPlacements.Values[adj] != null)
+								.Any()
+						)
+						{
+							blanksWithAdjacentFills.Add(posIndex);
+						}
+					}
+				}
+				Dictionary<int, List<Placement>> adjacentBlankPossibilities =
+					blanksWithAdjacentFills.Select(
+						i => KeyValuePair.Create(i, new List<Placement>())
+					).ToDictionary();
+				foreach (int blankPosIndex in blanksWithAdjacentFills)
+				{
+					var edgeRequirements = GetEdgeRequirements(
+						puzzleEnvironment,
+						listPlacements,
+						blankPosIndex
+					);
+					// Work out, among all of the remaining pieces,
+					// if there iz zero, one, or more than one possible 
+					// choices for this position
+					for (
+						int candidatePieceIndex = 0; 
+						candidatePieceIndex < 256; 
+						++candidatePieceIndex
+					)
+					{
+						if (listPlacements.ContainsPieceIndex(candidatePieceIndex))
+						{
+							continue;
+						}
+						var candidateEdges = puzzleEnvironment.PieceSides[candidatePieceIndex];
+						var possibleRotations = edgeRequirements.SelectMany(
+							er => GetRotations(candidateEdges, er)
+						).ToArray();
+						if (possibleRotations.Length > 0)
+						{
+							adjacentBlankPossibilities[blankPosIndex].Add(
+								new Placement(
+									candidatePieceIndex,
+									possibleRotations
+								)
+							);
+							if (adjacentBlankPossibilities[blankPosIndex].Count == 3)
+							{
+								break;
+							}
+						}
+					}
+					switch(adjacentBlankPossibilities[blankPosIndex].Count)
+					{
+						case 0:
+							return null;
+						case 1:
+							return TryAddPiece(
+								puzzleEnvironment,
+								listPlacements,
+								blankPosIndex,
+								adjacentBlankPossibilities[blankPosIndex].Single().PieceIndex
+							);
+					}
+				}
+				// Now we have a list of adjacent blanks, each with two or more
+				// We can do some clever stuff here!
+				// Where there are pairs together, each with two
+				if(adjacentBlankPossibilities.Where(kvp => kvp.Value.Count == 2).Count() > 1)
+				{
+					int dummy = 3;
+				}
+			}
+			return listPlacements;
 		}
 
 	}
