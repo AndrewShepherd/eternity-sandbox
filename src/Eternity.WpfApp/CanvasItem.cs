@@ -2,8 +2,6 @@
 namespace Eternity.WpfApp
 {
 	using System;
-	using System.Collections.Immutable;
-	using System.Windows.Media;
 	using System.Windows.Media.Imaging;
 
 	public abstract class CanvasItem
@@ -55,10 +53,10 @@ namespace Eternity.WpfApp
 		internal static IEnumerable<CanvasPieceItem> GenerateCanvasItems(
 			PuzzleEnvironment environment, 
 			IReadOnlyList<BitmapImage> images,
-			Placement?[] placements)
+			IReadOnlyList<Placement?> placements)
 		{
 			var g = CreateCanvasItemGenerator(environment, images);
-			for(int i = 0; i < placements.Length; ++i)
+			for(int i = 0; i < placements.Count; ++i)
 			{
 				var item = placements[i];
 				if (item != null)
