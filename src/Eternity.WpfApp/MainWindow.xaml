@@ -76,6 +76,10 @@
 					   FontSize="16" FontFamily="Courier New"
 					   HorizontalAlignment="Center"
 					    />
+			<StackPanel Orientation="Horizontal">
+				<TextBlock>Placements: </TextBlock>
+				<TextBlock Text="{Binding PlacementCount}" />
+			</StackPanel>
 
 		</StackPanel>
 	</Grid>

@@ -37,77 +37,35 @@
 		public ICommand TryNextCommand => new DelegateCommand(TryNext);
 
 
-		private record class StackEntry(int PieceIndex, Placements Placements);
-
 		private void LoopUntilAnswerFound(CancellationToken cancellationToken)
 		{
 			var currentSequence = _sequence.Value;
 			var puzzleEnvironment = _generatePuzzleEnvironmentTask.Result;
 
-			var stackEntries = new StackEntry?[256];
+			var placementStack = new PlacementStack();
+
 			while (!cancellationToken.IsCancellationRequested)
 			{
 				IEnumerable<int> pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
 
-				// Find the stack entry that matches this
-				var matchingStackEntryIndex = -1;
-				var matchingPlacements = Placements.Empty;
+				int badListPlacementIndex = placementStack.ApplyPieceOrder(
+					puzzleEnvironment,
+					pieceIndexes
+				);
 
-				var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
-
-				for (int i = 0; i < stackEntries.Length; ++i)
+				if (badListPlacementIndex == placementStack._stackEntries.Length)
 				{
-					pieceIndexEnumerator.MoveNext();
-					var thisEntry = stackEntries[i];
-					if (thisEntry == null)
-					{
-						break;
-					}
-
-					if (thisEntry.PieceIndex != pieceIndexEnumerator.Current)
-					{
-						for (int j = 0; j < stackEntries.Length; ++j)
-						{
-							if (stackEntries[j] == null)
-							{
-								break;
-							}
-							stackEntries[j] = null;
-						}
-						break;
-					}
-					matchingStackEntryIndex = i;
-					matchingPlacements = thisEntry.Placements;
-				}
-				int? badListPlacementIndex = default;
-				for (int i = matchingStackEntryIndex + 1; true; ++i)
-				{
-					var newPlacements = PuzzleSolver.TryAddPiece(
-						puzzleEnvironment,
-						matchingPlacements,
-						i,
-						pieceIndexEnumerator.Current
-					);
-					if (newPlacements == null)
-					{
-						badListPlacementIndex = i;
-						break;
-					}
-					stackEntries[i] = new StackEntry(pieceIndexEnumerator.Current, newPlacements);
-					matchingPlacements = newPlacements;
-					if (!pieceIndexEnumerator.MoveNext())
-					{
-						break;
-					}
-				}
-				if (!badListPlacementIndex.HasValue)
-				{
+					// This is a success!
+					// We will never reach this code in a billion years
+					// but it's nice to dream
+					_sequence.OnNext(currentSequence);
+					_placements.OnNext(placementStack._stackEntries.Last()!.Placements);
 					break;
 				}
-				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(badListPlacementIndex.Value);
+				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(badListPlacementIndex);
 				currentSequence = Sequence.Increment(currentSequence, badIndex);
 				_sequence.OnNext(currentSequence);
-				_placements.OnNext(matchingPlacements);
+				_placements.OnNext(placementStack._stackEntries[badListPlacementIndex - 1]!.Placements);
 			}
 		}
 
@@ -203,6 +161,9 @@
 			return canvasItems;
 		}
 
+		private int _placementCount = 0;
+		public int PlacementCount => _placementCount;
+
 		private async void SetUpObservables()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
@@ -230,19 +191,33 @@
 
 			var placementsObservable = _placements.Sample(TimeSpan.FromSeconds(0.5));
 
+
+			placementsObservable.Subscribe(
+				placements =>
+				{
+					int placementCount = placements.Values.Where(p => p != null).Count();
+					if (placementCount != this.PlacementCount)
+					{
+						this._placementCount = placementCount;
+						this._propertyChangedEventHandler?.Invoke(this, new(nameof(PlacementCount)));
+					}
+				}
+			);
 			var canvasItemsObservable = Observable.CombineLatest(
 				placementsObservable,
 				selectedSequenceIndexObservable,
 				(listPlacements, selectedSequenceIndex) => Tuple.Create(listPlacements, selectedSequenceIndex)
 			).Select(
 				t =>
-				GenerateCanvasItems(puzzleEnvironment,
+				{
+					return GenerateCanvasItems(puzzleEnvironment,
 							bitmapWidth,
 							bitmapHeight,
 							bitmapImages,
 							t.Item1.Values,
 							t.Item2
-						)
+						);
+				}
 			);
 
 			canvasItemsObservable
