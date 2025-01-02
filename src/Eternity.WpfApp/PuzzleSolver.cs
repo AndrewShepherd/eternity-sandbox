@@ -256,87 +256,74 @@ namespace Eternity.WpfApp
 
 			// Perform a sweep. Get a list of all of the positions
 			// that are blank but have adjacent non-blank
-			bool mustPerformSweep = true;
-			while (mustPerformSweep)
+			// Check if they have only one possible piece
+			// (There is no end to how sophisticated this bit can get
+
+
+			List<int> blanksWithAdjacentFills = [];
+			for (int posIndex = 0; posIndex < listPlacements.Values.Count; ++posIndex)
 			{
-				mustPerformSweep = false;
-				List<int> blanksWithAdjacentFills = [];
-				for (int posIndex = 0; posIndex < listPlacements.Values.Count; ++posIndex)
+				if (listPlacements.Values[posIndex] == null)
 				{
-					if (listPlacements.Values[posIndex] == null)
-					{
-						if (
-							PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, posIndex)
-								.Where(adj => listPlacements.Values[adj] != null)
-								.Any()
-						)
-						{
-							blanksWithAdjacentFills.Add(posIndex);
-						}
-					}
-				}
-				Dictionary<int, List<Placement>> adjacentBlankPossibilities =
-					blanksWithAdjacentFills.Select(
-						i => KeyValuePair.Create(i, new List<Placement>())
-					).ToDictionary();
-				foreach (int blankPosIndex in blanksWithAdjacentFills)
-				{
-					var edgeRequirements = GetEdgeRequirements(
-						puzzleEnvironment,
-						listPlacements,
-						blankPosIndex
-					);
-					// Work out, among all of the remaining pieces,
-					// if there iz zero, one, or more than one possible 
-					// choices for this position
-					for (
-						int candidatePieceIndex = 0; 
-						candidatePieceIndex < 256; 
-						++candidatePieceIndex
+					if (
+						PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, posIndex)
+							.Where(adj => listPlacements.Values[adj] != null)
+							.Any()
 					)
 					{
-						if (listPlacements.ContainsPieceIndex(candidatePieceIndex))
-						{
-							continue;
-						}
-						var candidateEdges = puzzleEnvironment.PieceSides[candidatePieceIndex];
-						var possibleRotations = edgeRequirements.SelectMany(
-							er => GetRotations(candidateEdges, er)
-						).ToArray();
-						if (possibleRotations.Length > 0)
-						{
-							adjacentBlankPossibilities[blankPosIndex].Add(
-								new Placement(
-									candidatePieceIndex,
-									possibleRotations
-								)
-							);
-							if (adjacentBlankPossibilities[blankPosIndex].Count == 3)
-							{
-								break;
-							}
-						}
-					}
-					switch(adjacentBlankPossibilities[blankPosIndex].Count)
-					{
-						case 0:
-							return null;
-						case 1:
-							return TryAddPiece(
-								puzzleEnvironment,
-								listPlacements,
-								blankPosIndex,
-								adjacentBlankPossibilities[blankPosIndex].Single().PieceIndex
-							);
+						blanksWithAdjacentFills.Add(posIndex);
 					}
 				}
-				// Now we have a list of adjacent blanks, each with two or more
-				// We can do some clever stuff here!
-				// Where there are pairs together, each with two
-				if(adjacentBlankPossibilities.Where(kvp => kvp.Value.Count == 2).Count() > 1)
+			}
+			foreach (int blankPosIndex in blanksWithAdjacentFills)
+			{
+				var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
+					puzzleEnvironment,
+					listPlacements,
+					blankPosIndex
+				);
+				// Work out, among all of the remaining pieces,
+				// if there iz zero, one, or more than one possible 
+				// choices for this position
+				Placement? possiblePlacement = null;
+				bool moreThanOne = false;
+				for (int candidatePieceIndex = 0; candidatePieceIndex < 256; ++candidatePieceIndex)
 				{
-					int dummy = 3;
+					if (listPlacements.ContainsPieceIndex(candidatePieceIndex))
+					{
+						continue;
+					}
+					var candidateEdges = puzzleEnvironment.PieceSides[candidatePieceIndex];
+					var possibleRotations = edgeRequirements.SelectMany(
+						er => PuzzleSolver.GetRotations(candidateEdges, er)
+					).ToArray();
+					if (possibleRotations.Any())
+					{
+						if (possiblePlacement == null)
+						{
+							possiblePlacement = new Placement(candidatePieceIndex, possibleRotations);
+						}
+						else
+						{
+							moreThanOne = true;
+							break;
+						}
+					}
 				}
+				if (moreThanOne)
+				{
+					continue;
+				}
+				if (possiblePlacement == null)
+				{
+					return null;
+				}
+				return TryAddPiece(
+					puzzleEnvironment,
+					listPlacements,
+					blankPosIndex,
+					possiblePlacement.PieceIndex
+				);
 			}
 			return listPlacements;
 		}
