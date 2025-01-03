@@ -14,8 +14,22 @@
 	using System.Collections.Immutable;
 	using System.Collections.ObjectModel;
 
+
+	internal abstract class RunningState();
+
+	internal sealed class Stopped() : RunningState;
+
+	internal sealed class Running(CancellationTokenSource cancellationTokenSource) : RunningState
+	{
+		private readonly CancellationTokenSource _cancellationTokenSource = cancellationTokenSource;
+
+		public CancellationTokenSource CancellationTokenSource => _cancellationTokenSource;
+	}
+
 	internal class MainWindowViewModel : INotifyPropertyChanged
 	{
+		RunningState _state = new Stopped();
+
 		PropertyChangedEventHandler? _propertyChangedEventHandler;
 
 		event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
@@ -34,8 +48,57 @@
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(GenerateRandom);
 
-		public ICommand TryNextCommand => new DelegateCommand(TryNext);
+		public ICommand StartCommand => new DelegateCommand(
+			Start,
+			() => CanStart
+		).ObservesProperty(() => this.State);
 
+
+		public ICommand StopCommand => new DelegateCommand(
+			Stop, 
+			() => this.CanStop
+		).ObservesProperty(() => this.State);
+
+		public ICommand StepForwardCommand => new DelegateCommand(
+			StepForward,
+			() => _state is Stopped
+		).ObservesProperty(() => this.State);
+
+		public bool CanStart => _state is Stopped;
+
+		public bool CanStop => _state is Running;
+
+
+		async void StepForward()
+		{
+			var currentSequence = _sequence.Value;
+			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
+			var placementStack = new PlacementStack();
+			var (initialPlacementCount, initialPlacements) = placementStack.ApplyPieceOrder(
+				puzzleEnvironment,
+				Sequence.GeneratePieceIndexes(currentSequence)
+			);
+			int initialBadSequenceIndex = Sequence.ListPlacementIndexToSequenceIndex(
+				initialPlacementCount
+			);
+			int placementCount = initialPlacementCount;
+			
+			while(true)
+			{
+				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
+				currentSequence = Sequence.Increment(currentSequence, badIndex);
+				(placementCount, var placements) = placementStack.ApplyPieceOrder(
+					puzzleEnvironment,
+					Sequence.GeneratePieceIndexes(currentSequence)
+				);
+				if (!placements.Equals(initialPlacements))
+				{
+					this._sequence.OnNext(currentSequence);
+					this._placements.OnNext(placements);
+					break;
+				}
+			}
+		}
 
 		private void LoopUntilAnswerFound(CancellationToken cancellationToken)
 		{
@@ -46,11 +109,9 @@
 
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				IEnumerable<int> pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
-
 				var (placementCount, placements) = placementStack.ApplyPieceOrder(
 					puzzleEnvironment,
-					pieceIndexes
+					Sequence.GeneratePieceIndexes(currentSequence)
 				);
 
 				_sequence.OnNext(currentSequence);
@@ -68,21 +129,60 @@
 			}
 		}
 
-		CancellationTokenSource _loopCancellationToken = new CancellationTokenSource();
-		public void TryNext()
+		public RunningState State
 		{
-			var thread = new Thread(
-				new ThreadStart(
-					() => LoopUntilAnswerFound(_loopCancellationToken.Token)
-				)
+			get => _state;
+			set
+			{
+				if (this._state != value)
+				{
+					this._state = value;
+					this._propertyChangedEventHandler?.Invoke(this, new(nameof(State)));
+				}
+			}
+		}
+
+		public void Start()
+		{
+			if (this._state is Stopped)
+			{
+				var tokenSource = new CancellationTokenSource();
+				var thread = new Thread(
+					new ThreadStart(
+						() => LoopUntilAnswerFound(tokenSource.Token)
+					)
+				);
+				thread.Priority = ThreadPriority.Lowest;
+				thread.Start();
+				this.State = new Running(tokenSource);
+			}
+		}
+
+		public void Stop()
+		{
+			if (this._state is Running r)
+			{
+				r.CancellationTokenSource.Cancel();
+			}
+			this.State = new Stopped();
+		}
+
+		private async void SetSequence(int[] sequence)
+		{
+			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
+			var placementStack = new PlacementStack();
+			var (count, placements) = placementStack.ApplyPieceOrder(
+				puzzleEnvironment,
+				Sequence.GeneratePieceIndexes(sequence)
 			);
-			thread.Priority = ThreadPriority.Lowest;
-			thread.Start();
+			this._sequence.OnNext(sequence);
+			this._placements.OnNext(placements);
+
 		}
 
 		private void GenerateRandom()
 		{
-			this._sequence.OnNext(Sequence.GenerateRandomSequence());
+			this.SetSequence(Sequence.GenerateRandomSequence());
 		}
 
 
@@ -248,7 +348,10 @@
 
 		internal void OnClosed()
 		{
-			this._loopCancellationToken.Cancel();
+			if(this._state is Running r)
+			{
+				r.CancellationTokenSource.Cancel();
+			}
 		}
 
 		public MainWindowViewModel()
@@ -258,7 +361,7 @@
 				Sequence.Dimensions.Select(d => new SequenceListEntry { Value = 0 })
 			);
 			SetUpObservables();
-
+			this.SetSequence(Sequence.FirstSequence);
 		}
 	}
 }

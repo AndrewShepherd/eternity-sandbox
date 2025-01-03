@@ -9,8 +9,12 @@
 	>
 	<Window.Resources>
 		<local:MainWindowViewModel x:Key="MainWindowViewModel" />
+		<Style TargetType="{x:Type Button}">
+			<Setter Property="Margin" Value="3,3,3,3" />
+			<Setter Property="Padding" Value="3,3,3,3" />
+		</Style>
 	</Window.Resources>
-    <Grid DataContext="{StaticResource MainWindowViewModel}">
+	<Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="4*" />
 			<ColumnDefinition Width="3*" />
@@ -46,12 +50,20 @@
 			</ItemsControl.ItemContainerStyle>
 		</ItemsControl>
 		<StackPanel Orientation="Vertical" Grid.Column="1">
-			<Button Command="{Binding GenerateRandomCommand}">
-				Random
-			</Button>
-			<Button Command="{Binding TryNextCommand}">
-				Search
-			</Button>
+			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+				<Button Command="{Binding GenerateRandomCommand}">
+					Random
+				</Button>
+				<Button Command="{Binding StartCommand}">
+					Start
+				</Button>
+				<Button Command="{Binding StopCommand}">
+					Stop
+				</Button>
+				<Button Command="{Binding StepForwardCommand}">
+					Step >>
+				</Button>
+			</StackPanel>
 			<ListView 
 				ItemsSource="{Binding SequenceListEntries}"
 				SelectedIndex="{Binding Mode=OneWayToSource, Path=SelectedSequenceIndex}"
