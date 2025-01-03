@@ -7,8 +7,12 @@
 		public StackEntry?[] _stackEntries = new StackEntry?[256];
 
 		// Mutates the stack so that it gets as far as it can
-		// Returns the number of pieces it actually applied
-		public int ApplyPieceOrder(
+		// Returns the number of pieces in applied
+		// and the resulting Placements
+		// (Not that there may be more placements than asked for
+		// because squares which can only have one piece are automatically
+		// filled)
+		public (int, Placements) ApplyPieceOrder(
 			PuzzleEnvironment puzzleEnvironment,
 			IEnumerable<int> pieceIndexes
 		)
@@ -53,7 +57,12 @@
 				);
 				if (newPlacements == null)
 				{
-					return i;
+					var lastPlacement = this._stackEntries[i - 1]?.Placements;
+					if (lastPlacement == null)
+					{
+						throw new Exception("Inexplicable null entry in the stack");
+					}
+					return (i, lastPlacement);
 				}
 				this._stackEntries[i] = new StackEntry(pieceIndexEnumerator.Current, newPlacements);
 				matchingPlacements = newPlacements;
@@ -62,7 +71,7 @@
 					break;
 				}
 			}
-			return i;
+			return (i, this._stackEntries.Last()!.Placements);
 		}
 	}
 }

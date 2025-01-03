@@ -48,24 +48,23 @@
 			{
 				IEnumerable<int> pieceIndexes = Sequence.GeneratePieceIndexes(currentSequence);
 
-				int badListPlacementIndex = placementStack.ApplyPieceOrder(
+				var (placementCount, placements) = placementStack.ApplyPieceOrder(
 					puzzleEnvironment,
 					pieceIndexes
 				);
 
-				if (badListPlacementIndex == placementStack._stackEntries.Length)
+				_sequence.OnNext(currentSequence);
+				_placements.OnNext(placements);
+
+				if (placementCount == placementStack._stackEntries.Length)
 				{
 					// This is a success!
 					// We will never reach this code in a billion years
 					// but it's nice to dream
-					_sequence.OnNext(currentSequence);
-					_placements.OnNext(placementStack._stackEntries.Last()!.Placements);
 					break;
 				}
-				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(badListPlacementIndex);
+				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
 				currentSequence = Sequence.Increment(currentSequence, badIndex);
-				_sequence.OnNext(currentSequence);
-				_placements.OnNext(placementStack._stackEntries[badListPlacementIndex - 1]!.Placements);
 			}
 		}
 
