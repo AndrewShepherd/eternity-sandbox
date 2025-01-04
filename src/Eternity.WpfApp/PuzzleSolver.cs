@@ -50,9 +50,9 @@ namespace Eternity.WpfApp
 
 		private static IEnumerable<int> GetAdjacentPlacementIndexes(PuzzleEnvironment puzzleEnvironment, int placementIndex)
 		{
-			var thisPosition = puzzleEnvironment.PositionLookup[placementIndex];
+			var thisPosition = Positions.PositionLookup[placementIndex];
 			return GetAdjacentPositions(thisPosition)
-				.Select(p => puzzleEnvironment.ReversePositionLookup[p]);
+				.Select(p => Positions.ReversePositionLookup[p]);
 		}
 
 		private static IEnumerable<int?> GetAdjacentSideColor(
@@ -62,7 +62,7 @@ namespace Eternity.WpfApp
 			int edgeIndex
 		)
 		{
-			if (puzzleEnvironment.ReversePositionLookup.TryGetValue(position, out var placementIndex))
+			if (Positions.ReversePositionLookup.TryGetValue(position, out var placementIndex))
 			{
 				var adjacentPlacement = existingPlacements.Values[placementIndex];
 				if (adjacentPlacement != null)
@@ -89,7 +89,7 @@ namespace Eternity.WpfApp
 				existingPlacements,
 				edgeIndex
 			);
-			var target = puzzleEnvironment.PositionLookup[targetPositionIndex];
+			var target = Positions.PositionLookup[targetPositionIndex];
 
 			IEnumerable<int?> edgeColor = [23];
 

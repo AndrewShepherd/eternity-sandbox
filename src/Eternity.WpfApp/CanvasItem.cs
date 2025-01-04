@@ -30,7 +30,6 @@ namespace Eternity.WpfApp
 	public static class CanvasItemExtensions
 	{
 		internal static Func<Placement, int, CanvasPieceItem> CreateCanvasItemGenerator(
-			PuzzleEnvironment environment,
 			IReadOnlyList<BitmapImage> images
 		)
 		{
@@ -39,7 +38,7 @@ namespace Eternity.WpfApp
 			var imageHeight = firstImage.Height;
 			return (placement, index) =>
 			{
-				var position = environment.PositionLookup[index];
+				var position = Positions.PositionLookup[index];
 				return new CanvasPieceItem
 				{
 					ImageSource = images[placement.PieceIndex],
@@ -50,12 +49,11 @@ namespace Eternity.WpfApp
 			};
 		} 
 
-		internal static IEnumerable<CanvasPieceItem> GenerateCanvasItems(
-			PuzzleEnvironment environment, 
+		internal static IEnumerable<CanvasPieceItem> GenerateCanvasPieceItems(
 			IReadOnlyList<BitmapImage> images,
 			IReadOnlyList<Placement?> placements)
 		{
-			var g = CreateCanvasItemGenerator(environment, images);
+			var g = CreateCanvasItemGenerator(images);
 			for(int i = 0; i < placements.Count; ++i)
 			{
 				var item = placements[i];

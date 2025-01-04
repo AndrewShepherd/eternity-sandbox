@@ -42,7 +42,9 @@
 		public static ImmutableArray<int> Dimensions => _dimensions;
 
 
-		public static int[] FirstSequence => new int[_dimensions.Length];
+		public static IReadOnlyList<int> FirstSequence => new int[_dimensions.Length];
+
+		public static IReadOnlyList<int> LastSequence = _dimensions.Select(d => d - 1).ToArray();
 		public static int[] GenerateRandomSequence()
 		{
 			var random = new Random();
@@ -51,11 +53,18 @@
 			).ToArray();
 		}
 
-		public static int[] Increment(IReadOnlyList<int> sequence, int index)
+		public static IReadOnlyList<int> Increment(this IReadOnlyList<int> sequence, int index)
 		{
 			if (sequence[index] == _dimensions[index] - 1)
 			{
-				return Increment(sequence, index - 1);
+				if (index == 0)
+				{
+					return Sequence.FirstSequence;
+				}
+				else
+				{
+					return Increment(sequence, index - 1);
+				}
 			}
 			int[] result = new int[sequence.Count];
 			for(int i = 0; i < sequence.Count; ++i)
@@ -65,6 +74,32 @@
 					int n when n < index => sequence[i],
 					int n when n == index => sequence[i] + 1,
 					_ => 0
+				};
+			}
+			return result;
+		}
+
+		public static IReadOnlyList<int> Decrement(this IReadOnlyList<int> sequence, int index)
+		{
+			if (sequence[index] == 0)
+			{
+				if (index == 0)
+				{
+					return Sequence.LastSequence;
+				}
+				else
+				{
+					return Decrement(sequence, index - 1);
+				}
+			}
+			int[] result = new int[sequence.Count];
+			for(int i = 0; i < sequence.Count; ++i)
+			{
+				result[i] = i switch
+				{
+					int n when n < index => sequence[i],
+					int n when n == index => sequence[i] - 1,
+					_ => _dimensions[i] - 1
 				};
 			}
 			return result;

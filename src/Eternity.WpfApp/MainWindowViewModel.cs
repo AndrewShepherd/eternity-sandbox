@@ -53,6 +53,11 @@
 			() => CanStart
 		).ObservesProperty(() => this.State);
 
+		public ICommand GoBackwardsCommand => new DelegateCommand(
+			GoBackwards,
+			() => CanStart
+		).ObservesProperty(() => this.State);
+
 
 		public ICommand StopCommand => new DelegateCommand(
 			Stop, 
@@ -64,12 +69,17 @@
 			() => _state is Stopped
 		).ObservesProperty(() => this.State);
 
+		public ICommand StepBackwardsCommand => new DelegateCommand(
+			StepBackwards,
+			() => _state is Stopped
+		).ObservesProperty(() => this.State);
+
 		public bool CanStart => _state is Stopped;
 
 		public bool CanStop => _state is Running;
 
 
-		async void StepForward()
+		async Task Step(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
 		{
 			var currentSequence = _sequence.Value;
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
@@ -82,11 +92,11 @@
 				initialPlacementCount
 			);
 			int placementCount = initialPlacementCount;
-			
-			while(true)
+
+			while (true)
 			{
 				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
-				currentSequence = Sequence.Increment(currentSequence, badIndex);
+				currentSequence = transform(currentSequence, badIndex);
 				(placementCount, var placements) = placementStack.ApplyPieceOrder(
 					puzzleEnvironment,
 					Sequence.GeneratePieceIndexes(currentSequence)
@@ -98,9 +108,17 @@
 					break;
 				}
 			}
+
 		}
 
-		private void LoopUntilAnswerFound(CancellationToken cancellationToken)
+		async void StepForward() => await Step((s, i) => s.Increment(i));
+
+		async void StepBackwards() => await Step((s, i) => s.Decrement(i));
+
+		private void LoopUntilAnswerFound(
+			CancellationToken cancellationToken,
+			Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform
+		)
 		{
 			var currentSequence = _sequence.Value;
 			var puzzleEnvironment = _generatePuzzleEnvironmentTask.Result;
@@ -125,7 +143,7 @@
 					break;
 				}
 				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
-				currentSequence = Sequence.Increment(currentSequence, badIndex);
+				currentSequence = transform(currentSequence, badIndex);
 			}
 		}
 
@@ -142,20 +160,31 @@
 			}
 		}
 
-		public void Start()
+		private void Go(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
 		{
 			if (this._state is Stopped)
 			{
 				var tokenSource = new CancellationTokenSource();
 				var thread = new Thread(
 					new ThreadStart(
-						() => LoopUntilAnswerFound(tokenSource.Token)
+						() => LoopUntilAnswerFound(tokenSource.Token, transform)
 					)
 				);
 				thread.Priority = ThreadPriority.Lowest;
 				thread.Start();
 				this.State = new Running(tokenSource);
 			}
+
+		}
+
+		public void Start()
+		{
+			Go(Sequence.Increment);
+		}
+
+		public void GoBackwards()
+		{
+			Go(Sequence.Decrement);
 		}
 
 		public void Stop()
@@ -167,7 +196,7 @@
 			this.State = new Stopped();
 		}
 
-		private async void SetSequence(int[] sequence)
+		private async void SetSequence(IReadOnlyList<int> sequence)
 		{
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
 			var placementStack = new PlacementStack();
@@ -186,7 +215,7 @@
 		}
 
 
-		BehaviorSubject<int[]> _sequence = new BehaviorSubject<int[]>(Sequence.FirstSequence);
+		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(Sequence.FirstSequence);
 		BehaviorSubject<Placements> _placements = new BehaviorSubject<Placements>(Placements.Empty);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
@@ -225,15 +254,13 @@
 		}
 
 		private IEnumerable<CanvasItem> GenerateCanvasItems(
-			PuzzleEnvironment puzzleEnvironment,
 			double bitmapWidth,
 			double bitmapHeight,
 			ImmutableList<BitmapImage> bitmapImages,
 			IReadOnlyList<Placement?> listPlacements,
 			int selectedSequenceIndex)
 		{
-			var canvasItems = CanvasItemExtensions.GenerateCanvasItems(
-				puzzleEnvironment,
+			var canvasItems = CanvasItemExtensions.GenerateCanvasPieceItems(
 				bitmapImages,
 				listPlacements
 			).Cast<CanvasItem>().ToList();
@@ -242,7 +269,7 @@
 			{
 				var highlightedPositionIndexes = Sequence.SequenceIndexToPositionIndexes(SelectedSequenceIndex);
 				var highlightedPositions = highlightedPositionIndexes
-					.Select(i => puzzleEnvironment.PositionLookup[i])
+					.Select(i => Positions.PositionLookup[i])
 					.ToArray();
 				foreach (var position in highlightedPositions)
 				{
@@ -309,13 +336,13 @@
 			).Select(
 				t =>
 				{
-					return GenerateCanvasItems(puzzleEnvironment,
-							bitmapWidth,
-							bitmapHeight,
-							bitmapImages,
-							t.Item1.Values,
-							t.Item2
-						);
+					return GenerateCanvasItems(
+						bitmapWidth,
+						bitmapHeight,
+						bitmapImages,
+						t.Item1.Values,
+						t.Item2
+					);
 				}
 			);
 
@@ -335,7 +362,7 @@
 				.Subscribe(
 					sequence =>
 					{
-						for (int i = 0; i < sequence.Length; i++)
+						for (int i = 0; i < sequence.Count; i++)
 						{
 							this.SequenceListEntries[i].Value = sequence[i];
 						}

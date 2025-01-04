@@ -54,6 +54,12 @@
 				<Button Command="{Binding GenerateRandomCommand}">
 					Random
 				</Button>
+				<Button Command="{Binding StepBackwardsCommand}">
+					&lt;&lt; Step
+				</Button>
+				<Button Command="{Binding GoBackwardsCommand}">
+					Backwards
+				</Button>
 				<Button Command="{Binding StartCommand}">
 					Start
 				</Button>
