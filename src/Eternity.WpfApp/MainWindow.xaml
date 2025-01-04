@@ -43,12 +43,9 @@
 				</DataTemplate>
 				<DataTemplate DataType="{x:Type local:CanvasConstraintItem}">
 					<Border Width="{Binding Width}" Height="{Binding Height}" Padding="6,6,6,6">
-						<Viewbox
-
-					>
+						<Viewbox>
 							<TextBlock Text="{Binding Count}" />
 						</Viewbox>
-
 					</Border>
 				</DataTemplate>
 			</ItemsControl.Resources>

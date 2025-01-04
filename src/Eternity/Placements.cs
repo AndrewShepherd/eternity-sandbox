@@ -49,7 +49,7 @@ namespace Eternity
 			{
 				_placements = _placements.SetItem(positionIndex, placement),
 				_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
-				_constraints = _constraints
+				_constraints = _constraints.SetPlacement(positionIndex, placement)
 			};
 		}
 
