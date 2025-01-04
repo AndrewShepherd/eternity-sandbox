@@ -19,6 +19,12 @@ namespace Eternity
 		private ImmutableArray<Placement?> _placements = EmptyPlacements;
 		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
 
+		private ImmutableArray<SquareConstraint> _constraints = Enumerable.Range(0, 256).Select(
+			_ => SquareConstraint.Initial
+		).ToImmutableArray();
+
+		public IReadOnlyList<SquareConstraint> Constraints => _constraints;
+
 		public readonly static Placements Empty = new Placements();
 
 		public Placements SetItem(int positionIndex, Placement placement)
@@ -42,7 +48,8 @@ namespace Eternity
 			return new Placements
 			{
 				_placements = _placements.SetItem(positionIndex, placement),
-				_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true)
+				_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
+				_constraints = _constraints
 			};
 		}
 

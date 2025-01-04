@@ -41,6 +41,16 @@
 						StrokeThickness="4"
 						/>
 				</DataTemplate>
+				<DataTemplate DataType="{x:Type local:CanvasConstraintItem}">
+					<Border Width="{Binding Width}" Height="{Binding Height}" Padding="6,6,6,6">
+						<Viewbox
+
+					>
+							<TextBlock Text="{Binding Count}" />
+						</Viewbox>
+
+					</Border>
+				</DataTemplate>
 			</ItemsControl.Resources>
 			<ItemsControl.ItemContainerStyle>
 				<Style TargetType="ContentPresenter">

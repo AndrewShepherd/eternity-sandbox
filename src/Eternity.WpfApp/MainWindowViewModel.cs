@@ -257,13 +257,21 @@
 			double bitmapWidth,
 			double bitmapHeight,
 			ImmutableList<BitmapImage> bitmapImages,
-			IReadOnlyList<Placement?> listPlacements,
+			Placements placements,
 			int selectedSequenceIndex)
 		{
-			var canvasItems = CanvasItemExtensions.GenerateCanvasPieceItems(
+			var pieceItems = CanvasItemExtensions.GenerateCanvasPieceItems(
 				bitmapImages,
-				listPlacements
-			).Cast<CanvasItem>().ToList();
+				placements.Values
+			);
+
+			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintItem(
+				bitmapWidth,
+				bitmapHeight,
+				placements.Constraints
+			);
+
+			var canvasItems = pieceItems.Cast<CanvasItem>().Concat(constraintItems).ToList();
 
 			if (selectedSequenceIndex >= 0)
 			{
@@ -340,7 +348,7 @@
 						bitmapWidth,
 						bitmapHeight,
 						bitmapImages,
-						t.Item1.Values,
+						t.Item1,
 						t.Item2
 					);
 				}
