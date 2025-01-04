@@ -10,24 +10,6 @@ namespace Eternity.WpfApp
 
 	static class PuzzleSolver
     {
-		private static class EdgeIndexes
-		{
-			public const int Top = 0;
-			public const int Right = 1;
-			public const int Bottom = 2;
-			public const int Left = 3;
-		}
-
-		private static ImmutableArray<int> Rotate(ImmutableArray<int> edges, Rotation rotation)
-		{
-			var result = new int[4];
-			for (int i = 0; i < edges.Length; i++)
-			{
-				result[(i + (int)rotation) % 4] = edges[i];
-			}
-			return result.ToImmutableArray();
-		}
-
 		private static IEnumerable<Position> GetAdjacentPositions(Position p)
 		{
 			if (p.X > 0)
@@ -69,7 +51,7 @@ namespace Eternity.WpfApp
 				{
 					var adjacentColors = puzzleEnvironment.PieceSides[adjacentPlacement.PieceIndex];
 					return adjacentPlacement.Rotations.Select(
-						r => Rotate(adjacentColors, r)
+						r => RotationExtensions.Rotate(adjacentColors, r)
 					).Select(topColorsRotated => topColorsRotated[edgeIndex])
 					.Select(n => (int?)n);
 				}
@@ -115,19 +97,7 @@ namespace Eternity.WpfApp
 			return edgeRequirements;
 		}
 
-		private static bool CanMatch(int? n1, int? n2) =>
-			(n1, n2) switch
-			{
-				(null, _) => true,
-				(_, null) => true,
-				_ => n1 == n2
-			};
 
-		private static bool CanMatch(EdgeRequirements r1, EdgeRequirements r2) =>
-			CanMatch(r1.left, r2.left)
-			&& CanMatch(r1.right, r2.right)
-			&& CanMatch(r1.top, r2.top)
-			&& CanMatch(r1.bottom, r2.bottom);
 
 		private static Rotation[] AllRotations = [
 			Rotation.None,
@@ -161,14 +131,14 @@ namespace Eternity.WpfApp
 		{
 			foreach(var rotation in AllRotations)
 			{
-				var rotatedSides = Rotate(sides, rotation);
+				var rotatedSides = RotationExtensions.Rotate(sides, rotation);
 				EdgeRequirements thisRequirements = new EdgeRequirements(
 					rotatedSides[EdgeIndexes.Left],
 					rotatedSides[EdgeIndexes.Top],
 					rotatedSides[EdgeIndexes.Right],
 					rotatedSides[EdgeIndexes.Bottom]
 				);
-				if (CanMatch(thisRequirements, edgeRequirements))
+				if (thisRequirements.CanMatch(edgeRequirements))
 				{
 					yield return rotation;
 				}
@@ -182,6 +152,7 @@ namespace Eternity.WpfApp
 			int pieceIndex
 			)
 		{
+
 			var pieceIndexAlredyThere = listPlacements.Values[positionIndex]?.PieceIndex;
 			if (pieceIndexAlredyThere != null)
 			{
@@ -193,6 +164,10 @@ namespace Eternity.WpfApp
 				{
 					return null;
 				}
+			}
+			if (!listPlacements.Constraints[positionIndex].Pieces.Contains(pieceIndex))
+			{
+				return null;
 			}
 			if (listPlacements.ContainsPieceIndex(pieceIndex))
 			{

@@ -216,7 +216,7 @@
 
 
 		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(Sequence.FirstSequence);
-		BehaviorSubject<Placements> _placements = new BehaviorSubject<Placements>(Placements.Empty);
+		BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
@@ -313,6 +313,8 @@
 
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
 
+			var placements = Placements.CreateInitial(puzzleEnvironment.PieceSides);
+			this._placements.OnNext(placements);
 			var selectedSequenceIndexObservable = Observable.FromEventPattern<
 				PropertyChangedEventHandler,
 				PropertyChangedEventArgs
@@ -326,17 +328,23 @@
 			var placementsObservable = _placements.Sample(TimeSpan.FromSeconds(0.5));
 
 
-			placementsObservable.Subscribe(
-				placements =>
-				{
-					int placementCount = placements.Values.Where(p => p != null).Count();
-					if (placementCount != this.PlacementCount)
+			placementsObservable
+				.ObserveOn(SynchronizationContext.Current!)
+				.Subscribe(
+					placements =>
 					{
-						this._placementCount = placementCount;
-						this._propertyChangedEventHandler?.Invoke(this, new(nameof(PlacementCount)));
+						if (placements != null)
+						{
+							int placementCount = placements.Values.Where(p => p != null).Count();
+							if (placementCount != this.PlacementCount)
+							{
+								this._placementCount = placementCount;
+								this._propertyChangedEventHandler?.Invoke(this, new(nameof(PlacementCount)));
+							}
+
+						}
 					}
-				}
-			);
+				);
 			var canvasItemsObservable = Observable.CombineLatest(
 				placementsObservable,
 				selectedSequenceIndexObservable,

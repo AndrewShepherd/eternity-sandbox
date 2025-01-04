@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,13 +20,9 @@ namespace Eternity
 		private ImmutableArray<Placement?> _placements = EmptyPlacements;
 		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
 
-		private ImmutableArray<SquareConstraint> _constraints = Enumerable.Range(0, 256).Select(
-			_ => SquareConstraint.Initial
-		).ToImmutableArray();
+		private ImmutableArray<SquareConstraint> _constraints;
 
 		public IReadOnlyList<SquareConstraint> Constraints => _constraints;
-
-		public readonly static Placements Empty = new Placements();
 
 		public Placements SetItem(int positionIndex, Placement placement)
 		{
@@ -58,6 +55,14 @@ namespace Eternity
 
 		private Placements()
 		{
+		}
+
+		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
+		{
+			return new Placements
+			{
+				_constraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides)
+			};
 		}
 	}
 }

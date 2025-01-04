@@ -12,6 +12,8 @@
 		// (Not that there may be more placements than asked for
 		// because squares which can only have one piece are automatically
 		// filled)
+
+		private Placements? _initialPlacements;
 		public (int, Placements) ApplyPieceOrder(
 			PuzzleEnvironment puzzleEnvironment,
 			IEnumerable<int> pieceIndexes
@@ -19,7 +21,11 @@
 		{
 			// Find the stack entry that matches this
 			var matchingStackEntryIndex = -1;
-			var matchingPlacements = Placements.Empty;
+			if (_initialPlacements == null)
+			{
+				_initialPlacements = Placements.CreateInitial(puzzleEnvironment.PieceSides);
+			}
+			Placements matchingPlacements = _initialPlacements; 
 
 			var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
 			int i = 0;
