@@ -24,7 +24,7 @@ namespace Eternity
 
 		public IReadOnlyList<SquareConstraint> Constraints => _constraints;
 
-		public Placements SetItem(int positionIndex, Placement placement)
+		public Placements? SetItem(int positionIndex, Placement placement)
 		{
 			var placementAlreadyThere = _placements[positionIndex];
 
@@ -42,12 +42,20 @@ namespace Eternity
 					throw new Exception("Attempting to set a position that's already been set");
 				}
 			}
-			return new Placements
+			var newConstraints = _constraints.SetPlacement(positionIndex, placement);
+			if (newConstraints == null)
 			{
-				_placements = _placements.SetItem(positionIndex, placement),
-				_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
-				_constraints = _constraints.SetPlacement(positionIndex, placement)
-			};
+				return null;
+			}
+			else
+			{
+				return new Placements
+				{
+					_placements = _placements.SetItem(positionIndex, placement),
+					_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
+					_constraints = (ImmutableArray<SquareConstraint>)newConstraints!
+				};
+			}
 		}
 
 		public IReadOnlyList<Placement?> Values => _placements;
@@ -59,10 +67,18 @@ namespace Eternity
 
 		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			return new Placements
+			ImmutableArray<SquareConstraint>? initialConstraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides);
+			if (initialConstraints is null)
 			{
-				_constraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides)
-			};
+				throw new Exception("Unable to generate the initial constraints");
+			}
+			else
+			{
+				return new Placements
+				{
+					_constraints = (ImmutableArray<SquareConstraint>)initialConstraints!
+				};
+			}
 		}
 	}
 }

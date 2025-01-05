@@ -187,8 +187,12 @@ namespace Eternity.WpfApp
 			}
 
 
-			listPlacements = listPlacements.SetItem(positionIndex, new Placement(pieceIndex, rotations));
-
+			var attempt = listPlacements.SetItem(positionIndex, new Placement(pieceIndex, rotations));
+			if (attempt == null)
+			{
+				return null;
+			}
+			listPlacements = attempt;
 			// There may be existing placements which had multiple rotations
 			// as a result of placing this piece they may no longer have multiple
 			// rotations
@@ -218,13 +222,18 @@ namespace Eternity.WpfApp
 					}
 					if (newRotations.Length < thisPlacement.Rotations.Length)
 					{
-						listPlacements = listPlacements.SetItem(
+						var thisAttempt = listPlacements.SetItem(
 							adjacentPlacementIndex,
 							new(
 								thisPlacement.PieceIndex,
 								newRotations
 							)
 						);
+						if (thisAttempt == null)
+						{
+							return null;
+						}
+						listPlacements = thisAttempt;
 					}
 				}
 			}

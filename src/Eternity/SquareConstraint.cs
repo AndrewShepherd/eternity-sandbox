@@ -191,13 +191,12 @@ namespace Eternity
 				return this;
 			}
 			var newPieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints);
-			if (!newPieces.Equals(this.Pieces))
-			{
-				newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-					newPieces,
-					newConstraints
-				);
-			}
+
+			newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+				newPieces,
+				newConstraints
+			);
+
 			return this with
 			{
 				PatternConstraints = newConstraints,
@@ -324,7 +323,7 @@ namespace Eternity
 			}
 		}
 
-		private static ImmutableArray<SquareConstraint> ProcessQueue(
+		private static ImmutableArray<SquareConstraint>? ProcessQueue(
 			ImmutableArray<SquareConstraint> constraints,
 			SquareConstraintTransformQueue q
 		)
@@ -346,6 +345,24 @@ namespace Eternity
 				if (!before.IsEquiavelentTo(after))
 				{
 					constraints = constraints.SetItem(constraintIndex, after);
+					if (after.Pieces.Count() == 0)
+					{
+						return null;
+					}
+					if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
+					{
+						var thePieceIndex = after.Pieces.First();
+						for(var i = 0; i < 256; ++i)
+						{
+							if (i != constraintIndex)
+							{
+								q.Push(
+									i,
+									c => c.RemovePossiblePiece(thePieceIndex)
+								);
+							}
+						}
+					}
 					if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
 					{
 						var adjPositionIndex = TransformPositionIndex(
@@ -411,7 +428,7 @@ namespace Eternity
 			return constraints;
 		}
 
-		public static ImmutableArray<SquareConstraint> GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
+		public static ImmutableArray<SquareConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
 			var constraintsArray = new SquareConstraint[256];
 			var initialConstraint = new SquareConstraint
@@ -448,7 +465,7 @@ namespace Eternity
 			return ProcessQueue(constraints, q);
 		}
 
-		public static ImmutableArray<SquareConstraint> SetPlacement(
+		public static ImmutableArray<SquareConstraint>? SetPlacement(
 			this ImmutableArray<SquareConstraint> constraints,
 			int positionIndex,
 			Placement placement)
