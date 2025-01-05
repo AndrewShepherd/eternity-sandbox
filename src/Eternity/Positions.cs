@@ -9,8 +9,6 @@ namespace Eternity
 {
 	public static class Positions
 	{
-
-
 		public static IReadOnlyList<Position> PositionLookup
 		{
 			get;
@@ -76,5 +74,10 @@ namespace Eternity
 			}
 			return rv;
 		}
+
+		public static Position Above(Position p) => new Position(p.X, p.Y - 1);
+		public static Position Below(Position p) => new Position(p.X, p.Y + 1);
+		public static Position Left(Position p) => new Position(p.X - 1, p.Y);
+		public static Position Right(Position p) => new Position(p.X + 1, p.Y);
 	}
 }

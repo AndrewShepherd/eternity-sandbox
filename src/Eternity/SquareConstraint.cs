@@ -1,8 +1,32 @@
 ﻿using System.Collections.Immutable;
 using System.Data;
+using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 namespace Eternity
 {
+	public static class ImmutableHashSetExtensions
+	{
+		public static bool IsEquivalentTo(this ImmutableHashSet<int> left, ImmutableHashSet<int> right)
+		=>
+			ReferenceEquals(left, right)
+			|| (
+				(left.Count == right.Count)
+				&& right.All(left.Contains)
+			);
+
+		public static ImmutableHashSet<int> Constrain(this ImmutableHashSet<int> s1, ImmutableHashSet<int> c)
+		{
+			if (s1.IsEquivalentTo(c))
+			{
+				return s1;
+			}
+			else
+			{
+				return s1.Intersect(c);
+			}
+		}
+	}
+
 	public record MultiPatternConstraints
 	{
 		public required ImmutableHashSet<int> Left;
@@ -10,6 +34,25 @@ namespace Eternity
 		public required ImmutableHashSet<int> Top;
 		public required ImmutableHashSet<int> Bottom;
 
+		public readonly static MultiPatternConstraints Never = new()
+		{
+			Left = ImmutableHashSet<int>.Empty,
+			Bottom = ImmutableHashSet<int>.Empty,
+			Right = ImmutableHashSet<int>.Empty,
+			Top = ImmutableHashSet<int>.Empty
+		};
+	}
+
+	public static class MultiPatterConstraintsExtensions
+	{
+		public static bool IsEquivalentTo(
+			this MultiPatternConstraints left,
+			MultiPatternConstraints right
+		) =>
+			left.Left.IsEquivalentTo(right.Left)
+			&& left.Top.IsEquivalentTo(right.Top)
+			&& left.Right.IsEquivalentTo(right.Right)
+			&& left.Bottom.IsEquivalentTo(right.Bottom);
 	}
 
 	public record class SquareConstraint
@@ -29,13 +72,45 @@ namespace Eternity
 		{
 		}
 
+		public readonly static SquareConstraint Never = new()
+		{
+			PiecePatternLookup = ImmutableArray<ImmutableArray<int>>.Empty,
+			PatternConstraints = MultiPatternConstraints.Never,
+			Pieces = ImmutableHashSet<int>.Empty
+		};
+
 		public SquareConstraint SetPlacement(
 			Placement placement
-		) =>
-			this with { Pieces = new[] { placement.PieceIndex }.ToImmutableHashSet() };
+		)
+		{
+			// TODO: Update the edge constraints
+			var newPatternConstraints = new MultiPatternConstraints
+			{
+				Left = ImmutableHashSet<int>.Empty,
+				Bottom = ImmutableHashSet<int>.Empty,
+				Right = ImmutableHashSet<int>.Empty,
+				Top = ImmutableHashSet<int>.Empty,
+			};
+			var patterns = this.PiecePatternLookup[placement.PieceIndex];
+			foreach(var rotation in placement.Rotations)
+			{
+				var rotated = RotationExtensions.Rotate(patterns, rotation);
+				newPatternConstraints = new MultiPatternConstraints
+				{
+					Left = newPatternConstraints.Left.Add(rotated[EdgeIndexes.Left]),
+					Bottom = newPatternConstraints.Bottom.Add(rotated[EdgeIndexes.Bottom]),
+					Top = newPatternConstraints.Top.Add(rotated[EdgeIndexes.Top]),
+					Right = newPatternConstraints.Right.Add(rotated[EdgeIndexes.Right])
+				};
+			}
+			return this with { 
+				Pieces = new[] { placement.PieceIndex }.ToImmutableHashSet(),
+				PatternConstraints = newPatternConstraints
+			};
+		}
 
 
-		private MultiPatternConstraints AdjustFilterConstraintsBasedOnAvailablePieces(
+		private MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
 			ImmutableHashSet<int> availablePieces,
 			MultiPatternConstraints currentConstraints
 		)
@@ -111,21 +186,46 @@ namespace Eternity
 		)
 		{
 			var newConstraints = transform(this.PatternConstraints);
-			if (newConstraints.Equals(this.PatternConstraints))
+			if (newConstraints.IsEquivalentTo(this.PatternConstraints))
 			{
 				return this;
 			}
 			var newPieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints);
 			if (!newPieces.Equals(this.Pieces))
 			{
-				// Changes the PatternConstraints to match the pieces
-				newConstraints = AdjustFilterConstraintsBasedOnAvailablePieces(newPieces, newConstraints);
+				newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+					newPieces,
+					newConstraints
+				);
 			}
 			return this with
 			{
 				PatternConstraints = newConstraints,
 				Pieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints)
 			};
+		}
+
+		public SquareConstraint RemovePossiblePiece(
+			int pieceIndex
+		)
+		{
+			if (Pieces.Contains(pieceIndex))
+			{
+				var newPieces = this.Pieces.Remove(pieceIndex);
+				var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+					newPieces,
+					this.PatternConstraints
+				);
+				return this with
+				{
+					Pieces = newPieces,
+					PatternConstraints = newConstraints
+				};
+			}
+			else
+			{
+				return this;
+			}
 		}
 
 		public SquareConstraint SetTopPattern(
@@ -140,6 +240,46 @@ namespace Eternity
 			mp => mp with { Left = new[] { pattern }.ToImmutableHashSet() }
 		);
 
+		public SquareConstraint ConstrainLeftPattern(
+			ImmutableHashSet<int> patterns
+		) => ModifyPatternConstraints(
+			mp => 
+				mp with 
+				{ 
+					Left = ImmutableHashSetExtensions.Constrain(mp.Left, patterns) 
+				}
+		);
+
+		public SquareConstraint ConstrainTopPattern(
+			ImmutableHashSet<int> patterns
+		) => ModifyPatternConstraints(
+			mp => 
+				mp with
+				{
+					Top = ImmutableHashSetExtensions.Constrain(mp.Top, patterns)
+				}
+		);
+
+		public SquareConstraint ConstrainBottomPattern(
+			ImmutableHashSet<int> patterns
+		) => ModifyPatternConstraints(
+			mp => 
+				mp with 
+				{ 
+					Bottom = ImmutableHashSetExtensions.Constrain(mp.Bottom, patterns) 
+				}
+		);
+
+		public SquareConstraint ConstrainRightPattern(
+			ImmutableHashSet<int> patterns
+		) => ModifyPatternConstraints(
+			mp => 
+				mp with 
+				{ 
+					Right = ImmutableHashSetExtensions.Constrain(mp.Right, patterns)
+				}
+		);
+
 		public SquareConstraint SetRightPattern(
 			int pattern
 		) => ModifyPatternConstraints(
@@ -151,23 +291,6 @@ namespace Eternity
 		) => ModifyPatternConstraints(
 			mp => mp with { Bottom = new[] { pattern }.ToImmutableHashSet() }
 		);
-
-		public SquareConstraint RemovePossiblePiece(
-			int pieceIndex
-		)
-		{
-			if ( Pieces.Contains( pieceIndex ))
-			{
-				return this with
-				{
-					Pieces = this.Pieces.Remove(pieceIndex)
-				};
-			}
-			else
-			{
-				return this;
-			}
-		}
 	}
 	
 	public static class SquareConstraintExtensions
@@ -177,19 +300,106 @@ namespace Eternity
 		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 24).ToImmutableHashSet();
 
 
+		public static bool IsEquiavelentTo(
+			this SquareConstraint c1,
+			SquareConstraint c2
+		) =>
+			ReferenceEquals(c1, c2)
+			|| (
+				c1.Pieces.IsEquivalentTo(c2.Pieces)
+				&& c1.PatternConstraints.IsEquivalentTo(c2.PatternConstraints)
+			);
+
+		private static int? TransformPositionIndex(int positionIndex, Func<Position, Position> t)
+		{
+			var position = Positions.PositionLookup[positionIndex];
+			var adjacentPosition = t(position);
+			if(Positions.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
+			{
+				return new int?(result);
+			}
+			else
+			{
+				return default;
+			}
+		}
+
+		private static ImmutableArray<SquareConstraint> TransformAdjacent(
+			ImmutableArray<SquareConstraint> constraints,
+			int positionIndex,
+			Func<Position, Position> transformPosition,
+			Func<SquareConstraint, SquareConstraint> transformConstraint
+			)
+		{
+			var adjPositionIndex = TransformPositionIndex(
+				positionIndex,
+				transformPosition
+			);
+			if (adjPositionIndex.HasValue)
+			{
+				constraints = TransformConstraint(
+					constraints,
+					adjPositionIndex.Value,
+					transformConstraint
+				);
+			}
+			return constraints;
+		}
+
 		private static ImmutableArray<SquareConstraint> TransformConstraint(
-			IReadOnlyList<SquareConstraint> constraints,
+			ImmutableArray<SquareConstraint> constraints,
 			int positionIndex,
 			Func<SquareConstraint, SquareConstraint> transform
 		)
 		{
+
 			var before = constraints[positionIndex];
 			var after = transform(before);
-			if (before != after)
+			if (!before.IsEquiavelentTo(after))
 			{
-				// TODO. Apply all of the cascading effects
+				Func<
+					Func<Position, Position>,
+					Func<SquareConstraint, SquareConstraint>,
+					ImmutableArray<SquareConstraint>
+				> trans = (transformPosition, transformConstraint) =>
+					TransformAdjacent(
+						constraints,
+						positionIndex,
+						transformPosition,
+						transformConstraint
+					);
+				constraints = constraints.SetItem(positionIndex, after);
+				if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
+				{
+					constraints = trans(
+						Positions.Left,
+						 c => c.ConstrainRightPattern(after.PatternConstraints.Left)
+					);
+				}
+				if(before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
+				{
+					constraints = trans(
+						Positions.Above,
+						c => c.ConstrainBottomPattern(after.PatternConstraints.Top)
+					);
+					// Cascade this up
+				}
+				if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
+				{
+					constraints = trans(
+						Positions.Right,
+						c => c.ConstrainLeftPattern(after.PatternConstraints.Right)
+					);
+				}
+				if(before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
+				{
+					constraints = trans(
+						Positions.Below,
+						c => c.ConstrainTopPattern(after.PatternConstraints.Bottom)
+					);
+				}
 			}
-			return constraints.ToImmutableArray().SetItem(positionIndex, after);
+			return constraints;
 		}
 
 		public static ImmutableArray<SquareConstraint> GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
@@ -245,23 +455,30 @@ namespace Eternity
 
 
 		public static ImmutableArray<SquareConstraint> SetPlacement(
-			this IReadOnlyList<SquareConstraint> constraints,
+			this ImmutableArray<SquareConstraint> constraints,
 			int positionIndex,
 			Placement placement)
 		{
-			return constraints.Select(
-				(c, i) =>
+			for(int i = 0; i < constraints.Length; ++i)
+			{
+				if (i == positionIndex)
 				{
-					if (i == positionIndex)
-					{
-						return c.SetPlacement(placement);
-					}
-					else
-					{
-						return c.RemovePossiblePiece(placement.PieceIndex);
-					}
+					constraints = TransformConstraint(
+						constraints,
+						i,
+						c => c.SetPlacement(placement)
+					);
 				}
-			).ToImmutableArray();
+				else
+				{
+					constraints = TransformConstraint(
+						constraints,
+						i,
+						c => c.RemovePossiblePiece(placement.PieceIndex)
+					);
+				}
+			}
+			return constraints;
 		}
 	}
 }
