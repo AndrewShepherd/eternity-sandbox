@@ -324,79 +324,88 @@ namespace Eternity
 			}
 		}
 
-		private static ImmutableArray<SquareConstraint> TransformAdjacent(
+		private static ImmutableArray<SquareConstraint> ProcessQueue(
 			ImmutableArray<SquareConstraint> constraints,
-			int positionIndex,
-			Func<Position, Position> transformPosition,
-			Func<SquareConstraint, SquareConstraint> transformConstraint
-			)
-		{
-			var adjPositionIndex = TransformPositionIndex(
-				positionIndex,
-				transformPosition
-			);
-			if (adjPositionIndex.HasValue)
-			{
-				constraints = TransformConstraint(
-					constraints,
-					adjPositionIndex.Value,
-					transformConstraint
-				);
-			}
-			return constraints;
-		}
-
-		private static ImmutableArray<SquareConstraint> TransformConstraint(
-			ImmutableArray<SquareConstraint> constraints,
-			int positionIndex,
-			Func<SquareConstraint, SquareConstraint> transform
+			SquareConstraintTransformQueue q
 		)
 		{
-
-			var before = constraints[positionIndex];
-			var after = transform(before);
-			if (!before.IsEquiavelentTo(after))
+			while (true)
 			{
-				Func<
-					Func<Position, Position>,
-					Func<SquareConstraint, SquareConstraint>,
-					ImmutableArray<SquareConstraint>
-				> trans = (transformPosition, transformConstraint) =>
-					TransformAdjacent(
-						constraints,
-						positionIndex,
-						transformPosition,
-						transformConstraint
-					);
-				constraints = constraints.SetItem(positionIndex, after);
-				if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
+				var qPopResult = q.Pop();
+				if (qPopResult == null)
 				{
-					constraints = trans(
-						Positions.Left,
-						 c => c.ConstrainRightPattern(after.PatternConstraints.Left)
-					);
+					break;
 				}
-				if(before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
+				var (constraintIndex, transforms) = qPopResult;
+				var before = constraints[constraintIndex];
+				var after = before;
+				foreach (var t in transforms)
 				{
-					constraints = trans(
-						Positions.Above,
-						c => c.ConstrainBottomPattern(after.PatternConstraints.Top)
-					);
-					// Cascade this up
+					after = t(after);
 				}
-				if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
+				if (!before.IsEquiavelentTo(after))
 				{
-					constraints = trans(
-						Positions.Right,
-						c => c.ConstrainLeftPattern(after.PatternConstraints.Right)
-					);
-				}
-				if(before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
-				{
-					constraints = trans(
-						Positions.Below,
-						c => c.ConstrainTopPattern(after.PatternConstraints.Bottom)
-					);
+					constraints = constraints.SetItem(constraintIndex, after);
+					if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
+					{
+						var adjPositionIndex = TransformPositionIndex(
+							constraintIndex,
+							Positions.Left
+						);
+						if (adjPositionIndex != null)
+						{
+							var left = after.PatternConstraints.Left;
+							q.Push(
+								adjPositionIndex.Value,
+								c => c.ConstrainRightPattern(left)
+							);
+						}
+					}
+					if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
+					{
+						var adjPositionIndex = TransformPositionIndex(
+							constraintIndex,
+							Positions.Above
+						);
+						if (adjPositionIndex != null)
+						{
+							var top = after.PatternConstraints.Top;
+							q.Push(
+								adjPositionIndex.Value,
+								c => c.ConstrainBottomPattern(top)
+							);
+						}
+					}
+					if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
+					{
+						var adjPositionIndex = TransformPositionIndex(
+							constraintIndex,
+							Positions.Right
+						);
+						if (adjPositionIndex != null)
+						{
+							var right = after.PatternConstraints.Right;
+							q.Push(
+								adjPositionIndex.Value,
+								c => c.ConstrainLeftPattern(right)
+							);
+						}
+					}
+					if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
+					{
+						var adjPositionIndex = TransformPositionIndex(
+							constraintIndex,
+							Positions.Below
+						);
+						if (adjPositionIndex != null)
+						{
+							var bottom = after.PatternConstraints.Bottom;
+							q.Push(
+								adjPositionIndex.Value,
+								c => c.ConstrainTopPattern(bottom)
+							);
+						}
+					}
 				}
 			}
 			return constraints;
@@ -415,70 +424,48 @@ namespace Eternity
 			}
 
 			var constraints = constraintsArray.ToImmutableArray();
+			var q = new SquareConstraintTransformQueue();
 			for (int placementIndex = 0; placementIndex < 256; ++placementIndex)
 			{
 				var position = Positions.PositionLookup[placementIndex];
 				if (position.X == 0)
 				{
-					constraints = TransformConstraint(
-						constraints, 
-						placementIndex, c => c.SetLeftPattern(23)
-					);
+					q.Push(placementIndex, c => c.SetLeftPattern(23));
 				}
 				if (position.Y == 0)
 				{
-					constraints = TransformConstraint(
-						constraints,
-						placementIndex, c => c.SetTopPattern(23)
-					);
+					q.Push(placementIndex, c => c.SetTopPattern(23));
 				}
 				if (position.X == 15)
 				{
-					constraints = TransformConstraint(
-						constraints,
-						placementIndex,
-						c => c.SetRightPattern(23)
-					);
+					q.Push(placementIndex, c => c.SetRightPattern(23));
 				}
 				if (position.Y == 15)
 				{
-					constraints = TransformConstraint(
-						constraints,
-						placementIndex, 
-						c => c.SetBottomPattern(23)
-					);
+					q.Push(placementIndex, c => c.SetBottomPattern(23));
 				}
 			}
-			return constraints;
+			return ProcessQueue(constraints, q);
 		}
-
-
 
 		public static ImmutableArray<SquareConstraint> SetPlacement(
 			this ImmutableArray<SquareConstraint> constraints,
 			int positionIndex,
 			Placement placement)
 		{
-			for(int i = 0; i < constraints.Length; ++i)
+			var q = new SquareConstraintTransformQueue();
+			for (int i = 0; i < constraints.Length; ++i)
 			{
 				if (i == positionIndex)
 				{
-					constraints = TransformConstraint(
-						constraints,
-						i,
-						c => c.SetPlacement(placement)
-					);
+					q.Push(i, c => c.SetPlacement(placement));
 				}
 				else
 				{
-					constraints = TransformConstraint(
-						constraints,
-						i,
-						c => c.RemovePossiblePiece(placement.PieceIndex)
-					);
+					q.Push(i, c => c.RemovePossiblePiece(placement.PieceIndex));
 				}
 			}
-			return constraints;
+			return ProcessQueue(constraints, q);
 		}
 	}
 }

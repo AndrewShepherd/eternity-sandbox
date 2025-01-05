@@ -229,75 +229,47 @@ namespace Eternity.WpfApp
 				}
 			}
 
-			// Perform a sweep. Get a list of all of the positions
-			// that are blank but have adjacent non-blank
-			// Check if they have only one possible piece
-			// (There is no end to how sophisticated this bit can get
-
-
-			List<int> blanksWithAdjacentFills = [];
-			for (int posIndex = 0; posIndex < listPlacements.Values.Count; ++posIndex)
+			List<int> positionsWithOneConstraint = [];
+			for(
+				int constraintIndex = 0;
+				constraintIndex < listPlacements.Constraints.Count;
+				++constraintIndex
+			)
 			{
-				if (listPlacements.Values[posIndex] == null)
-				{
-					if (
-						PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, posIndex)
-							.Where(adj => listPlacements.Values[adj] != null)
-							.Any()
-					)
-					{
-						blanksWithAdjacentFills.Add(posIndex);
-					}
-				}
-			}
-			foreach (int blankPosIndex in blanksWithAdjacentFills)
-			{
-				var edgeRequirements = PuzzleSolver.GetEdgeRequirements(
-					puzzleEnvironment,
-					listPlacements,
-					blankPosIndex
-				);
-				// Work out, among all of the remaining pieces,
-				// if there iz zero, one, or more than one possible 
-				// choices for this position
-				Placement? possiblePlacement = null;
-				bool moreThanOne = false;
-				for (int candidatePieceIndex = 0; candidatePieceIndex < 256; ++candidatePieceIndex)
-				{
-					if (listPlacements.ContainsPieceIndex(candidatePieceIndex))
-					{
-						continue;
-					}
-					var candidateEdges = puzzleEnvironment.PieceSides[candidatePieceIndex];
-					var possibleRotations = edgeRequirements.SelectMany(
-						er => PuzzleSolver.GetRotations(candidateEdges, er)
-					).ToArray();
-					if (possibleRotations.Any())
-					{
-						if (possiblePlacement == null)
-						{
-							possiblePlacement = new Placement(candidatePieceIndex, possibleRotations);
-						}
-						else
-						{
-							moreThanOne = true;
-							break;
-						}
-					}
-				}
-				if (moreThanOne)
+				if (listPlacements.Values[constraintIndex] != null)
 				{
 					continue;
 				}
-				if (possiblePlacement == null)
+				var constraint = listPlacements.Constraints[constraintIndex];
+				if (constraint.Pieces.Count() == 0)
 				{
 					return null;
 				}
+				if (constraint.Pieces.Count() == 1)
+				{
+					positionsWithOneConstraint.Add(constraintIndex);
+				}
+			}
+			if (positionsWithOneConstraint.Any())
+			{
+				var positionsAndPieces = positionsWithOneConstraint.Select(
+					i => new
+					{
+						PositionIndex = i,
+						PieceIndex = listPlacements.Constraints[i].Pieces.First()
+					}
+				).ToList();
+				if (positionsAndPieces.Select(p => p.PieceIndex).Distinct().Count() < positionsAndPieces.Count())
+				{
+					// Cannot put the same piece in multiple positions
+					return null;
+				}
+				var p = positionsAndPieces.First();
 				return TryAddPiece(
 					puzzleEnvironment,
 					listPlacements,
-					blankPosIndex,
-					possiblePlacement.PieceIndex
+					p.PositionIndex,
+					p.PieceIndex
 				);
 			}
 			return listPlacements;
