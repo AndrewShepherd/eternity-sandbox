@@ -46,7 +46,15 @@
 		} = Enumerable.Empty<CanvasItem>();
 
 
-		public ICommand GenerateRandomCommand => new DelegateCommand(GenerateRandom);
+		public ICommand GenerateRandomCommand => new DelegateCommand(
+			() => this.SetSequence(Sequence.GenerateRandomSequence()),
+			() => this.State is Stopped
+		).ObservesProperty(() => this.State);
+
+		public ICommand ResetSequenceCommand => new DelegateCommand(
+			() => this.SetSequence(Sequence.FirstSequence),
+			() => this.State is Stopped
+		).ObservesProperty(() => this.State);
 
 		public ICommand StartCommand => new DelegateCommand(
 			Start,

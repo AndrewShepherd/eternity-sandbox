@@ -58,23 +58,26 @@
 		</ItemsControl>
 		<StackPanel Orientation="Vertical" Grid.Column="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+				<Button Command="{Binding ResetSequenceCommand}">
+					Reset
+				</Button>
 				<Button Command="{Binding GenerateRandomCommand}">
 					Random
 				</Button>
 				<Button Command="{Binding StepBackwardsCommand}">
-					&lt;&lt; Step
+					&lt; Step
 				</Button>
 				<Button Command="{Binding GoBackwardsCommand}">
-					Backwards
+					&lt; &lt; Backwards
 				</Button>
 				<Button Command="{Binding StartCommand}">
-					Start
+					Forwards &gt;&gt;
 				</Button>
 				<Button Command="{Binding StopCommand}">
 					Stop
 				</Button>
 				<Button Command="{Binding StepForwardCommand}">
-					Step >>
+					Step &gt;
 				</Button>
 			</StackPanel>
 			<ListView 
