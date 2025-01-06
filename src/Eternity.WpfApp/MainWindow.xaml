@@ -64,20 +64,21 @@
 				<Button Command="{Binding GenerateRandomCommand}">
 					Random
 				</Button>
-				<Button Command="{Binding StepBackwardsCommand}">
-					&lt; Step
-				</Button>
+
 				<Button Command="{Binding GoBackwardsCommand}">
 					&lt; &lt; Backwards
 				</Button>
-				<Button Command="{Binding StartCommand}">
-					Forwards &gt;&gt;
+				<Button Command="{Binding StepBackwardsCommand}">
+					&lt; Step
 				</Button>
 				<Button Command="{Binding StopCommand}">
 					Stop
 				</Button>
 				<Button Command="{Binding StepForwardCommand}">
 					Step &gt;
+				</Button>
+				<Button Command="{Binding StartCommand}">
+					Forwards &gt;&gt;
 				</Button>
 			</StackPanel>
 			<ListView 
