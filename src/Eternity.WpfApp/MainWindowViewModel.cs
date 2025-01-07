@@ -6,14 +6,11 @@
 	using System.Reactive.Subjects;
 	using System.Reactive.Linq;
 	using System.Windows.Input;
-	using static Eternity.WpfApp.CanvasItemExtensions;
 	using System.Reactive.Threading.Tasks;
-	using System.Diagnostics;
 	using System.IO;
 	using System.Windows.Media.Imaging;
 	using System.Collections.Immutable;
 	using System.Collections.ObjectModel;
-
 
 	internal abstract class RunningState();
 
@@ -87,28 +84,19 @@
 		public bool CanStop => _state is Running;
 
 
-		async Task Step(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
+		void Step(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
 		{
+			if (_solutionState == null)
+			{
+				return;
+			}
+			var initialPlacements = this._placements.Value;
 			var currentSequence = _sequence.Value;
-			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
-			var placementStack = new PlacementStack();
-			var (initialPlacementCount, initialPlacements) = placementStack.ApplyPieceOrder(
-				puzzleEnvironment,
-				Sequence.GeneratePieceIndexes(currentSequence)
-			);
-			int initialBadSequenceIndex = Sequence.ListPlacementIndexToSequenceIndex(
-				initialPlacementCount
-			);
-			int placementCount = initialPlacementCount;
-
 			while (true)
 			{
-				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
+				int badIndex = _solutionState!.BadSequenceIndex;
 				currentSequence = transform(currentSequence, badIndex);
-				(placementCount, var placements) = placementStack.ApplyPieceOrder(
-					puzzleEnvironment,
-					Sequence.GeneratePieceIndexes(currentSequence)
-				);
+				var placements = this._solutionState.SetSequence(currentSequence);
 				if (!placements.Equals(initialPlacements))
 				{
 					this._sequence.OnNext(currentSequence);
@@ -116,12 +104,11 @@
 					break;
 				}
 			}
-
 		}
 
-		async void StepForward() => await Step((s, i) => s.Increment(i));
+		void StepForward() => Step((s, i) => s.Increment(i));
 
-		async void StepBackwards() => await Step((s, i) => s.Decrement(i));
+		void StepBackwards() => Step((s, i) => s.Decrement(i));
 
 		private void LoopUntilAnswerFound(
 			CancellationToken cancellationToken,
@@ -129,29 +116,27 @@
 		)
 		{
 			var currentSequence = _sequence.Value;
-			var puzzleEnvironment = _generatePuzzleEnvironmentTask.Result;
-
-			var placementStack = new PlacementStack();
-
+			var currentPlacements = this._placements.Value;
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				var (placementCount, placements) = placementStack.ApplyPieceOrder(
-					puzzleEnvironment,
-					Sequence.GeneratePieceIndexes(currentSequence)
-				);
-
-				_sequence.OnNext(currentSequence);
-				_placements.OnNext(placements);
-
-				if (placementCount == placementStack._stackEntries.Length)
+				var badIndex = _solutionState!.BadSequenceIndex;
+				if (badIndex >= currentSequence.Count - 1)
 				{
 					// This is a success!
 					// We will never reach this code in a billion years
 					// but it's nice to dream
 					break;
 				}
-				int badIndex = Sequence.ListPlacementIndexToSequenceIndex(placementCount);
 				currentSequence = transform(currentSequence, badIndex);
+				var placements = _solutionState.SetSequence(currentSequence);
+
+				_sequence.OnNext(currentSequence);
+
+				if (placements != currentPlacements)
+				{
+					_placements.OnNext(placements);
+					currentPlacements = placements;
+				}
 			}
 		}
 
@@ -204,22 +189,16 @@
 			this.State = new Stopped();
 		}
 
-		private async void SetSequence(IReadOnlyList<int> sequence)
+		private void SetSequence(IReadOnlyList<int> sequence)
 		{
-			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
-			var placementStack = new PlacementStack();
-			var (count, placements) = placementStack.ApplyPieceOrder(
-				puzzleEnvironment,
-				Sequence.GeneratePieceIndexes(sequence)
-			);
+			if (_solutionState == null)
+			{
+				return;
+			}
+			var placements = _solutionState.SetSequence(sequence);
 			this._sequence.OnNext(sequence);
 			this._placements.OnNext(placements);
 
-		}
-
-		private void GenerateRandom()
-		{
-			this.SetSequence(Sequence.GenerateRandomSequence());
 		}
 
 
@@ -306,6 +285,8 @@
 		private int _placementCount = 0;
 		public int PlacementCount => _placementCount;
 
+		private SolutionState? _solutionState = null;
+
 		private async void SetUpObservables()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
@@ -320,6 +301,7 @@
 			var bitmapHeight = bitmapImages[0].Height;
 
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
+			_solutionState = new SolutionState(puzzleEnvironment);
 
 			var placements = Placements.CreateInitial(puzzleEnvironment.PieceSides);
 			this._placements.OnNext(placements);
