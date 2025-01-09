@@ -2,7 +2,7 @@
 {
 	using System.ComponentModel;
 
-	internal class SequenceListEntry : INotifyPropertyChanged
+	public class SequenceListEntry : INotifyPropertyChanged
 	{
 		private PropertyChangedEventHandler? _propertyChanged;
 		event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged

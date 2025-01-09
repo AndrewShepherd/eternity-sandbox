@@ -10,7 +10,9 @@
 	using System.IO;
 	using System.Windows.Media.Imaging;
 	using System.Collections.Immutable;
-	using System.Collections.ObjectModel;
+
+
+	using static Eternity.Sequence;
 
 	internal abstract class RunningState();
 
@@ -44,12 +46,12 @@
 
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(
-			() => this.SetSequence(Sequence.GenerateRandomSequence()),
+			() => this.SetSequence(GenerateRandomSequence()),
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
 		public ICommand ResetSequenceCommand => new DelegateCommand(
-			() => this.SetSequence(Sequence.FirstSequence),
+			() => this.SetSequence(FirstSequence),
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
@@ -172,12 +174,12 @@
 
 		public void Start()
 		{
-			Go(Sequence.Increment);
+			Go(Eternity.Sequence.Increment);
 		}
 
 		public void GoBackwards()
 		{
-			Go(Sequence.Decrement);
+			Go(Eternity.Sequence.Decrement);
 		}
 
 		public void Stop()
@@ -202,7 +204,7 @@
 		}
 
 
-		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(Sequence.FirstSequence);
+		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(FirstSequence);
 		BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
@@ -224,7 +226,6 @@
 			return bitmap;
 		}
 
-		public ObservableCollection<SequenceListEntry> SequenceListEntries { get; set; }
 
 		private int _selectedSequenceIndex = 0;
 		public int SelectedSequenceIndex
@@ -262,7 +263,7 @@
 
 			if (selectedSequenceIndex >= 0)
 			{
-				var highlightedPositionIndexes = Sequence.SequenceIndexToPositionIndexes(SelectedSequenceIndex);
+				var highlightedPositionIndexes = SequenceIndexToPositionIndexes(SelectedSequenceIndex);
 				var highlightedPositions = highlightedPositionIndexes
 					.Select(i => Positions.PositionLookup[i])
 					.ToArray();
@@ -286,6 +287,8 @@
 		public int PlacementCount => _placementCount;
 
 		private SolutionState? _solutionState = null;
+
+		public IReadOnlyList<int> Sequence => this._sequence.Value;
 
 		private async void SetUpObservables()
 		{
@@ -368,13 +371,10 @@
 				.Subscribe(
 					sequence =>
 					{
-						for (int i = 0; i < sequence.Count; i++)
-						{
-							this.SequenceListEntries[i].Value = sequence[i];
-						}
 						this.SequenceAsString = SequenceListEntry.SequenceToString(sequence);
 
 						this._propertyChangedEventHandler?.Invoke(this, new(nameof(SequenceAsString)));
+						this._propertyChangedEventHandler?.Invoke(this, new(nameof(Sequence)));
 					}
 				);
 		}
@@ -390,11 +390,8 @@
 		public MainWindowViewModel()
 		{
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
-			this.SequenceListEntries = new ObservableCollection<SequenceListEntry>(
-				Sequence.Dimensions.Select(d => new SequenceListEntry { Value = 0 })
-			);
 			SetUpObservables();
-			this.SetSequence(Sequence.FirstSequence);
+			this.SetSequence(FirstSequence);
 		}
 	}
 }

@@ -81,26 +81,12 @@
 					Forwards &gt;&gt;
 				</Button>
 			</StackPanel>
-			<ListView 
-				ItemsSource="{Binding SequenceListEntries}"
-				SelectedIndex="{Binding Mode=OneWayToSource, Path=SelectedSequenceIndex}"
-			>
-				<ListView.ItemsPanel>
-					<ItemsPanelTemplate>
-						<UniformGrid Columns="16" />
-					</ItemsPanelTemplate>
-				</ListView.ItemsPanel>
-				<ListView.ItemTemplate>
-					<DataTemplate>
-						<TextBlock 
-							FontSize="16"
-							FontFamily="Courier New"
-							TextAlignment="Right"
-							HorizontalAlignment="Stretch"
-							Text="{Binding ValueAsHex}" />
-					</DataTemplate>
-				</ListView.ItemTemplate>
-			</ListView>
+			
+			<local:SequenceControl
+				Sequence="{Binding Sequence}" 
+				SelectedSequenceIndex="{Binding Path=SelectedSequenceIndex,Mode=TwoWay}" 
+			/>
+
 			<TextBlock Text="{Binding SelectedSequenceIndex}" 
 					   FontSize="16" FontFamily="Courier New"
 					   HorizontalAlignment="Center"
