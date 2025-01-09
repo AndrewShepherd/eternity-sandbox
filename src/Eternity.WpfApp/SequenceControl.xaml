@@ -22,11 +22,17 @@
 		<ListView.ItemTemplate>
 			<DataTemplate>
 				<TextBlock 
-							FontSize="16"
-							FontFamily="Courier New"
-							TextAlignment="Right"
-							HorizontalAlignment="Stretch"
-							Text="{Binding ValueAsHex}" />
+					FontSize="16"
+					FontFamily="Courier New"
+					FontWeight="Bold"
+					TextAlignment="Right"
+					HorizontalAlignment="Stretch"
+					Text="{Binding ValueAsHex}" 
+				>
+					<TextBlock.Foreground>
+						<SolidColorBrush Color="{Binding ForegroundColor}" />
+					</TextBlock.Foreground>
+				</TextBlock>
 			</DataTemplate>
 		</ListView.ItemTemplate>
 	</ListView>

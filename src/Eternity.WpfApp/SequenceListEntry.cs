@@ -1,6 +1,7 @@
 ﻿namespace Eternity.WpfApp
 {
 	using System.ComponentModel;
+	using System.Windows.Media;
 
 	public class SequenceListEntry : INotifyPropertyChanged
 	{
@@ -22,6 +23,20 @@
 					_value = value;
 					_propertyChanged?.Invoke(this, new(nameof(Value)));
 					_propertyChanged?.Invoke(this, new(nameof(ValueAsHex)));
+				}
+			}
+		}
+
+		private Color _foregroundColor = Colors.Black;
+		public Color ForegroundColor
+		{
+			get => _foregroundColor;
+			set
+			{
+				if (value != _foregroundColor)
+				{
+					_foregroundColor = value;
+					_propertyChanged?.Invoke(this, new(nameof(ForegroundColor)));
 				}
 			}
 		}
