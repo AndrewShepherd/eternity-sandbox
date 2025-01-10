@@ -181,6 +181,39 @@ namespace Eternity
 			return rv;
 		}
 
+		private (MultiPatternConstraints, ImmutableHashSet<int>) AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
+			MultiPatternConstraints patterns,
+			ImmutableHashSet<int> pieces)
+		{
+			var newPatterns = AdjustPatternConstraintsBasedOnAvailablePieces(pieces, patterns);
+			if (newPatterns.IsEquivalentTo(patterns))
+			{
+				return (patterns, pieces);
+			}
+			else
+			{
+				return FilterSetBasedOnPatternsRecursive(newPatterns, pieces);
+			}
+		}
+
+		private (MultiPatternConstraints, ImmutableHashSet<int>) FilterSetBasedOnPatternsRecursive(
+			MultiPatternConstraints patterns,
+			ImmutableHashSet<int> pieces)
+		{
+			var newPieces = FilterSetBasedOnPatterns(pieces, patterns);
+			if (newPieces.IsEquivalentTo(pieces))
+			{
+				return (patterns, pieces);
+			}
+			else
+			{
+				return AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
+					patterns,
+					newPieces
+				);
+			}
+		}
+
 		private SquareConstraint ModifyPatternConstraints(
 			Func<MultiPatternConstraints, MultiPatternConstraints> transform
 		)
@@ -190,18 +223,18 @@ namespace Eternity
 			{
 				return this;
 			}
-			var newPieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints);
-
-			newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-				newPieces,
-				newConstraints
-			);
-
-			return this with
+			else
 			{
-				PatternConstraints = newConstraints,
-				Pieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints)
-			};
+				(newConstraints, var newPieces) = AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
+					newConstraints,
+					this.Pieces
+				);
+				return this with
+				{
+					PatternConstraints = newConstraints,
+					Pieces = newPieces
+				};
+			}
 		}
 
 		public SquareConstraint RemovePossiblePiece(
@@ -210,10 +243,9 @@ namespace Eternity
 		{
 			if (Pieces.Contains(pieceIndex))
 			{
-				var newPieces = this.Pieces.Remove(pieceIndex);
-				var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-					newPieces,
-					this.PatternConstraints
+				var (newConstraints, newPieces) = AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
+					this.PatternConstraints,
+					this.Pieces.Remove(pieceIndex)
 				);
 				return this with
 				{
