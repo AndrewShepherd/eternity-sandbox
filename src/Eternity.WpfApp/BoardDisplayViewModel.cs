@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -30,6 +31,11 @@ namespace Eternity.WpfApp
 
 	public sealed class BoardDisplayViewModel : BindableBase
 	{
+		readonly ThreadSafePropertyChangedNotifier _propChangedNotifier;
+		public BoardDisplayViewModel()
+		{
+			_propChangedNotifier = new(OnPropertyChanged);
+		}
 		private Dispatcher _uiDispatcher = Dispatcher.CurrentDispatcher;
 
 		private IEnumerable<CanvasItem> _canvasItems = Enumerable.Empty<CanvasItem>();
@@ -151,8 +157,6 @@ namespace Eternity.WpfApp
 			);
 		}
 
-
-
 		private void UpdateCanvasItems()
 		{
 
@@ -185,33 +189,8 @@ namespace Eternity.WpfApp
 			);
 		}
 
-		private System.Collections.Concurrent.ConcurrentDictionary<string, bool> _staleProps = new();
 
-		void ThreadSafeRaisePropertyChanged(string propertyName)
-		{
-			if(_staleProps.TryAdd(propertyName, true))
-			{
-				_uiDispatcher.BeginInvoke(
-					() =>
-					{
-						while(_staleProps.Count > 0)
-						{
-							foreach(var k in _staleProps.Keys)
-							{
-								if (_staleProps.TryRemove(k, out bool dummy))
-								{
-									this.RaisePropertyChanged(k);
-								}
-							}
-						}
-					}
-				);
-			}
-			else
-			{
-				int dummy = 3;
-			}
-		}
+
 
 		public IEnumerable<CanvasItem> CanvasItems
 		{
@@ -219,7 +198,7 @@ namespace Eternity.WpfApp
 			set
 			{
 				_canvasItems = value;
-				ThreadSafeRaisePropertyChanged(nameof(CanvasItems));
+				_propChangedNotifier.PropertyChanged(nameof(CanvasItems));
 			}
 		}
 

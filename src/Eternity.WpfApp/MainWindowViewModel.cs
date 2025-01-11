@@ -221,15 +221,6 @@
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
-
-
-
-		public string SequenceAsString { get; set; } = string.Empty;
-
-
-
-
-
 		private int _selectedSequenceIndex = 0;
 		public int SelectedSequenceIndex
 		{
@@ -278,7 +269,6 @@
 
 
 			placementsObservable
-				.ObserveOn(SynchronizationContext.Current!)
 				.Subscribe(
 					placements =>
 					{
@@ -288,24 +278,21 @@
 							if (placementCount != this.PlacementCount)
 							{
 								this._placementCount = placementCount;
-								this._propertyChangedEventHandler?.Invoke(this, new(nameof(PlacementCount)));
+								this._propChangedNotifier.PropertyChanged(nameof(PlacementCount));
 							}
 						}
-						this._propertyChangedEventHandler?.Invoke(this, new(nameof(this.Placements)));
+						this._propChangedNotifier.PropertyChanged(nameof(Placements));
 					}
 				);
 
 			this.SelectedSequenceIndex = -1;
 			_sequence
 				.Sample(TimeSpan.FromSeconds(0.1))
-				.ObserveOn(SynchronizationContext.Current!)
+				//.ObserveOn(SynchronizationContext.Current!)
 				.Subscribe(
 					sequence =>
 					{
-						this.SequenceAsString = SequenceListEntry.SequenceToString(sequence);
-
-						this._propertyChangedEventHandler?.Invoke(this, new(nameof(SequenceAsString)));
-						this._propertyChangedEventHandler?.Invoke(this, new(nameof(Sequence)));
+						this._propChangedNotifier.PropertyChanged(nameof(Sequence));
 					}
 				);
 		}
@@ -318,8 +305,14 @@
 			}
 		}
 
+		readonly ThreadSafePropertyChangedNotifier _propChangedNotifier;
+
+
 		public MainWindowViewModel()
 		{
+			_propChangedNotifier = new(
+				args => this._propertyChangedEventHandler?.Invoke(this, args)
+			);
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
 			SetUpObservables();
 			this.SetSequence(FirstSequence);
