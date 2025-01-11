@@ -80,6 +80,10 @@ namespace Eternity.WpfApp
 		{
 			for(int i = 0; i < constraints.Count; ++i)
 			{
+				if (constraints[i].Pieces.Count == 1)
+				{
+					continue;
+				}
 				var position = Positions.PositionLookup[i];
 				yield return new CanvasConstraintItem
 				{
