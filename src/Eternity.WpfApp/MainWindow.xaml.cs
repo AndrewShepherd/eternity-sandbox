@@ -24,7 +24,7 @@ namespace Eternity.WpfApp
 		protected override void OnClosed(EventArgs e)
 		{
 			var viewModel = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
-			viewModel.OnClosed();
+			viewModel?.OnClosed();
 			base.OnClosed(e);
 		}
 	}

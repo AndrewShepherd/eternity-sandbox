@@ -19,43 +19,10 @@
 			<ColumnDefinition Width="4*" />
 			<ColumnDefinition Width="3*" />
 		</Grid.ColumnDefinitions>
-		<ItemsControl ItemsSource="{Binding CanvasItems}" Grid.Column="0">
-			<ItemsControl.ItemsPanel>
-				<ItemsPanelTemplate>
-					<Canvas />
-				</ItemsPanelTemplate>
-			</ItemsControl.ItemsPanel>
-			<ItemsControl.Resources>
-				<DataTemplate DataType="{x:Type local:CanvasPieceItem}">
-					<Image Source="{Binding ImageSource}" RenderTransformOrigin="0.5, 0.5">
-						<Image.RenderTransform>
-							<RotateTransform Angle="{Binding Rotation}" />
-						</Image.RenderTransform>
-					</Image>
-				</DataTemplate>
-				<DataTemplate DataType="{x:Type local:CanvasHighlightItem}">
-					<Rectangle
-						Width="{Binding Width}"
-						Height="{Binding Height}"
-						Stroke="Yellow"
-						StrokeThickness="4"
-						/>
-				</DataTemplate>
-				<DataTemplate DataType="{x:Type local:CanvasConstraintItem}">
-					<Border Width="{Binding Width}" Height="{Binding Height}" Padding="6,6,6,6">
-						<Viewbox>
-							<TextBlock Text="{Binding Count}" />
-						</Viewbox>
-					</Border>
-				</DataTemplate>
-			</ItemsControl.Resources>
-			<ItemsControl.ItemContainerStyle>
-				<Style TargetType="ContentPresenter">
-					<Setter Property="Canvas.Left" Value="{Binding Left}" />
-					<Setter Property="Canvas.Top" Value="{Binding Top}" />
-				</Style>
-			</ItemsControl.ItemContainerStyle>
-		</ItemsControl>
+		<local:BoardDisplay
+			Grid.Column="0"
+			CanvasItems="{Binding CanvasItems}"
+		/>
 		<StackPanel Orientation="Vertical" Grid.Column="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
 				<Button Command="{Binding ResetSequenceCommand}">
