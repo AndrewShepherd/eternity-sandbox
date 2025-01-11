@@ -2,13 +2,10 @@
 {
 	public class PuzzlePiece(
 		int index,
-		int[] sides,
-		string imageId
+		int[] sides
 	)
 	{
 		public int Index => index;
 		public int[] Sides => sides;
-
-		public string ImageId => imageId;
 	}
 }

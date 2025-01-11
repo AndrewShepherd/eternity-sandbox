@@ -65,21 +65,6 @@ namespace Eternity.WpfApp
 			return bitmap;
 		}
 
-		private Task<ImmutableList<BitmapImage>> _fetchBitmapImages =
-			PuzzleProvider.LoadPieces().ContinueWith(
-				t =>
-					t.Result.Select(
-						p =>
-						{
-							using (var stream = ImageProvider.Load(p.ImageId))
-								return CreateFromStream(stream!);
-						}
-					).ToImmutableList()
-			);
-
-
-
-
 		private static IEnumerable<CanvasItem> GenerateCanvasItems(
 			double bitmapWidth,
 			double bitmapHeight,
@@ -151,16 +136,16 @@ namespace Eternity.WpfApp
 			return result;
 		}
 
-		private async Task GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
+		private void GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
 		{
-			var bitmapImages = await _fetchBitmapImages;
 			var triangleImages = _triangles ?? LoadTriangles().ToImmutableArray();
-
 			var boardSideLength = Math.Min(
 				canvasItemGenerationParameters.CanvasSize.Width,
 				canvasItemGenerationParameters.CanvasSize.Height
 			);
-			var squareSideLength = boardSideLength / 16.0;
+			var boardSquares = canvasItemGenerationParameters.Placements.Values.Count;
+			var squaresPerSide = Math.Sqrt(boardSquares);
+			var squareSideLength = boardSideLength / squaresPerSide;
 			var canvasItems = GenerateCanvasItems(
 				squareSideLength,
 				squareSideLength,

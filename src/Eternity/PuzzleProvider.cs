@@ -17,11 +17,9 @@ namespace Eternity
 			foreach(var element in rootElement.EnumerateArray())
 			{
 				var codeProperty = element.GetProperty("code");
-				var imageNameProperty = element.GetProperty("imageName");
 				yield return new PuzzlePiece(
 					element.GetProperty("index").GetInt32(),
-					ConvertToSides(codeProperty.GetString()!),
-					imageNameProperty.GetString()!
+					ConvertToSides(codeProperty.GetString()!)
 				);
 			}
 		}
