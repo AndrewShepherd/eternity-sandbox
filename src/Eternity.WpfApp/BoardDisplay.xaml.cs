@@ -23,10 +23,49 @@ namespace Eternity.WpfApp
 		public BoardDisplay()
 		{
 			InitializeComponent();
+			this.SizeChanged += BoardDisplay_SizeChanged;
 		}
 
+		private void BoardDisplay_SizeChanged(object sender, SizeChangedEventArgs e)
+		{
+			var viewModel = this.ViewModel;
+			if (viewModel != null)
+			{
+				viewModel.CanvasSize = e.NewSize;
+			}
+		}
+
+		private static void UpdateViewModel(DependencyObject o, Action<BoardDisplayViewModel> action)
+		{
+			BoardDisplay? boardDisplay = o as BoardDisplay;
+			var viewModel = boardDisplay?.ViewModel;
+			if (viewModel != null)
+			{
+				action(viewModel);
+			}
+		}
+
+		public Placements? Placements
+		{
+			get => GetValue(PlacementsProperty) as Placements;
+			set => SetValue(PlacementsProperty, value);
+		}
+
+		public static DependencyProperty PlacementsProperty = DependencyProperty.Register(
+			nameof(Placements),
+			typeof(Placements),
+			typeof(BoardDisplay),
+			new PropertyMetadata
+			{
+				PropertyChangedCallback = (o, e) => UpdateViewModel(
+					o,
+					vm => vm.Placements = e.NewValue as Placements
+				)
+			}
+		);
+
 		public IEnumerable<CanvasItem>? CanvasItems
-		{ 
+		{
 			get => GetValue(CanvasItemsProperty) as IEnumerable<CanvasItem>;
 			set => SetValue(CanvasItemsProperty, value);
 		}
@@ -40,12 +79,33 @@ namespace Eternity.WpfApp
 				DefaultValue = Enumerable.Empty<CanvasItem>(),
 				PropertyChangedCallback = (o, e) =>
 				{
-					BoardDisplay? boardDisplay = o as BoardDisplay;
-					var viewModel = boardDisplay?.ViewModel;
-					if (viewModel != null)
-					{
-						viewModel.CanvasItems = (e.NewValue as IEnumerable<CanvasItem>) ?? Enumerable.Empty<CanvasItem>();
-					}
+					UpdateViewModel(
+						o,
+						vm => vm.CanvasItems = (e.NewValue as IEnumerable<CanvasItem>) ?? Enumerable.Empty<CanvasItem>()
+					);
+				}
+			}
+		);
+
+		public int SelectedSequenceIndex
+		{
+			get => (int)GetValue(SelectedSequenceIndexProperty);
+			set => SetValue(SelectedSequenceIndexProperty, value);
+		}
+
+		public static DependencyProperty SelectedSequenceIndexProperty = DependencyProperty.Register(
+			nameof(SelectedSequenceIndex),
+			typeof(int),
+			typeof(BoardDisplay),
+			new PropertyMetadata
+			{
+				DefaultValue = -1,
+				PropertyChangedCallback = (o, e) =>
+				{
+					UpdateViewModel(
+						o,
+						vm => vm.SelectedSequenceIndex = (int)(e.NewValue)
+					);
 				}
 			}
 		);
@@ -53,6 +113,11 @@ namespace Eternity.WpfApp
 		private BoardDisplayViewModel? ViewModel
 		{
 			get => this.Resources["BoardDisplayViewModel"] as BoardDisplayViewModel;
+		}
+
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
 		}
 	}
 }

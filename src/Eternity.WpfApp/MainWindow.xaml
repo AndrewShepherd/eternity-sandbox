@@ -16,12 +16,13 @@
 	</Window.Resources>
 	<Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="4*" />
-			<ColumnDefinition Width="3*" />
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="Auto" />
 		</Grid.ColumnDefinitions>
 		<local:BoardDisplay
 			Grid.Column="0"
-			CanvasItems="{Binding CanvasItems}"
+			SelectedSequenceIndex="{Binding SelectedSequenceIndex}"
+			Placements="{Binding Placements}"
 		/>
 		<StackPanel Orientation="Vertical" Grid.Column="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

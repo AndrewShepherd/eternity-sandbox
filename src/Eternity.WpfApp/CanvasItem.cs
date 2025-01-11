@@ -8,6 +8,10 @@ namespace Eternity.WpfApp
 	{
 		double Top { get;}
 		double Left { get; }
+
+		double Width { get; }
+
+		double Height { get; }
 	}
 
 	public class CanvasPieceItem : CanvasItem
@@ -16,6 +20,10 @@ namespace Eternity.WpfApp
 
 		public double Top { get; init; }
 		public double Left { get; init; }
+
+		public double Width { get; init; }
+
+		public double Height { get; init; }
 		public int Rotation { get; internal set; }
 	}
 
@@ -44,12 +52,11 @@ namespace Eternity.WpfApp
 	public static class CanvasItemExtensions
 	{
 		internal static Func<Placement, int, CanvasPieceItem> CreateCanvasPieceItemGenerator(
+			double imageWidth,
+			double imageHeight,
 			IReadOnlyList<BitmapImage> images
 		)
 		{
-			var firstImage = images[0];
-			var imageWidth = firstImage.Width;
-			var imageHeight = firstImage.Height;
 			return (placement, index) =>
 			{
 				var position = Positions.PositionLookup[index];
@@ -58,6 +65,8 @@ namespace Eternity.WpfApp
 					ImageSource = images[placement.PieceIndex],
 					Left = position.X * imageWidth,
 					Top = position.Y * imageHeight,
+					Width = imageWidth,
+					Height = imageHeight,
 					Rotation = (int)placement.Rotations[0] * 90,
 				};
 			};
@@ -84,10 +93,12 @@ namespace Eternity.WpfApp
 		}
 
 		internal static IEnumerable<CanvasPieceItem> GenerateCanvasPieceItems(
+			double pieceWidth,
+			double pieceHeight,
 			IReadOnlyList<BitmapImage> images,
 			IReadOnlyList<Placement?> placements)
 		{
-			var g = CreateCanvasPieceItemGenerator(images);
+			var g = CreateCanvasPieceItemGenerator(pieceWidth, pieceHeight, images);
 			for(int i = 0; i < placements.Count; ++i)
 			{
 				var item = placements[i];

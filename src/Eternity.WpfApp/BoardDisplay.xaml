@@ -16,12 +16,19 @@
 	>
 		<ItemsControl.ItemsPanel>
 			<ItemsPanelTemplate>
-				<Canvas />
+				<Canvas IsItemsHost="True" />
 			</ItemsPanelTemplate>
 		</ItemsControl.ItemsPanel>
 		<ItemsControl.Resources>
 			<DataTemplate DataType="{x:Type local:CanvasPieceItem}">
-				<Image Source="{Binding ImageSource}" RenderTransformOrigin="0.5, 0.5">
+				<Image 
+					Source="{Binding ImageSource}" 
+					RenderTransformOrigin="0.5, 0.5"
+					Width="{Binding Width}"
+					Height="{Binding Height}"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Stretch"
+				>
 					<Image.RenderTransform>
 						<RotateTransform Angle="{Binding Rotation}" />
 					</Image.RenderTransform>

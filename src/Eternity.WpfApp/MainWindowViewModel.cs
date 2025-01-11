@@ -44,6 +44,18 @@
 			set;
 		} = Enumerable.Empty<CanvasItem>();
 
+		public Placements? Placements
+		{
+			get => _placements.Value;
+			set
+			{
+				if(_placements.Value != value)
+				{
+					_placements.OnNext(value);
+				}
+			}
+		}
+
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(
 			() => this.SetSequence(GenerateRandomSequence()),
@@ -215,16 +227,7 @@
 		public string SequenceAsString { get; set; } = string.Empty;
 
 
-		private static BitmapImage CreateFromStream(Stream stream)
-		{
-			var bitmap = new BitmapImage();
-			bitmap.BeginInit();
-			bitmap.StreamSource = stream;
-			bitmap.CacheOption = BitmapCacheOption.OnLoad;
-			bitmap.EndInit();
-			bitmap.Freeze();
-			return bitmap;
-		}
+
 
 
 		private int _selectedSequenceIndex = 0;
@@ -241,47 +244,7 @@
 			}
 		}
 
-		private IEnumerable<CanvasItem> GenerateCanvasItems(
-			double bitmapWidth,
-			double bitmapHeight,
-			ImmutableList<BitmapImage> bitmapImages,
-			Placements placements,
-			int selectedSequenceIndex)
-		{
-			var pieceItems = CanvasItemExtensions.GenerateCanvasPieceItems(
-				bitmapImages,
-				placements.Values
-			);
-
-			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintItem(
-				bitmapWidth,
-				bitmapHeight,
-				placements.Constraints
-			);
-
-			var canvasItems = pieceItems.Cast<CanvasItem>().Concat(constraintItems).ToList();
-
-			if (selectedSequenceIndex >= 0)
-			{
-				var highlightedPositionIndexes = SequenceIndexToPositionIndexes(SelectedSequenceIndex);
-				var highlightedPositions = highlightedPositionIndexes
-					.Select(i => Positions.PositionLookup[i])
-					.ToArray();
-				foreach (var position in highlightedPositions)
-				{
-					canvasItems.Add(
-						new CanvasHighlightItem
-						{
-							Top = position.Y * bitmapHeight,
-							Left = position.X * bitmapWidth,
-							Width = bitmapWidth,
-							Height = bitmapHeight,
-						}
-					);
-				}
-			}
-			return canvasItems;
-		}
+		
 
 		private int _placementCount = 0;
 		public int PlacementCount => _placementCount;
@@ -293,15 +256,8 @@
 		private async void SetUpObservables()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
-			var bitmapImages = pieces.Select(
-				p =>
-				{
-					using (var stream = ImageProvider.Load(p.ImageId))
-						return CreateFromStream(stream!);
-				}
-			).ToImmutableList();
-			var bitmapWidth = bitmapImages[0].Width;
-			var bitmapHeight = bitmapImages[0].Height;
+
+
 
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
 			_solutionState = new SolutionState(puzzleEnvironment);
@@ -334,36 +290,11 @@
 								this._placementCount = placementCount;
 								this._propertyChangedEventHandler?.Invoke(this, new(nameof(PlacementCount)));
 							}
-
 						}
+						this._propertyChangedEventHandler?.Invoke(this, new(nameof(this.Placements)));
 					}
 				);
-			var canvasItemsObservable = Observable.CombineLatest(
-				placementsObservable,
-				selectedSequenceIndexObservable,
-				(listPlacements, selectedSequenceIndex) => Tuple.Create(listPlacements, selectedSequenceIndex)
-			).Select(
-				t =>
-				{
-					return GenerateCanvasItems(
-						bitmapWidth,
-						bitmapHeight,
-						bitmapImages,
-						t.Item1,
-						t.Item2
-					);
-				}
-			);
 
-			canvasItemsObservable
-				.ObserveOn(SynchronizationContext.Current!)
-				.Subscribe(
-					t =>
-					{
-						this.CanvasItems = t;
-						this._propertyChangedEventHandler?.Invoke(this, new(nameof(CanvasItems)));
-					}
-				);
 			this.SelectedSequenceIndex = -1;
 			_sequence
 				.Sample(TimeSpan.FromSeconds(0.1))
