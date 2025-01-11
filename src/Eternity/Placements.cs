@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Eternity
+﻿namespace Eternity
 {
+	using System.Collections.Immutable;
+
 	// An immutable, indexable list of Placement
 	//
-	// When you add an item, it will create a new object
-	// Enforces a constraint that you cannot add an item
-	// to an index that's already created
+	// Enforces a number of constraints
+	//
+	// - You cannot place an item where an item already is
+	// - You cannot place the same item in multiple positions
+	//
 	public class Placements
 	{
 		private static ImmutableArray<Placement?> EmptyPlacements = new Placement?[256].ToImmutableArray();
@@ -51,6 +47,7 @@ namespace Eternity
 			{
 				return new Placements
 				{
+					PieceSides = this.PieceSides,
 					_placements = _placements.SetItem(positionIndex, placement),
 					_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
 					_constraints = (ImmutableArray<SquareConstraint>)newConstraints!
@@ -59,6 +56,9 @@ namespace Eternity
 		}
 
 		public IReadOnlyList<Placement?> Values => _placements;
+
+		public IReadOnlyList<ImmutableArray<int>> PieceSides { get; private init; } = [];
+
 		public bool ContainsPieceIndex(int pieceIndex) => _usedPieceIndexes[pieceIndex];
 
 		private Placements()
@@ -68,7 +68,7 @@ namespace Eternity
 		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
 			ImmutableArray<SquareConstraint>? initialConstraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides);
-			if (initialConstraints is null)
+			if (initialConstraints == null)
 			{
 				throw new Exception("Unable to generate the initial constraints");
 			}
@@ -76,7 +76,8 @@ namespace Eternity
 			{
 				return new Placements
 				{
-					_constraints = (ImmutableArray<SquareConstraint>)initialConstraints!
+					PieceSides = pieceSides,
+					_constraints = (ImmutableArray<SquareConstraint>) initialConstraints
 				};
 			}
 		}

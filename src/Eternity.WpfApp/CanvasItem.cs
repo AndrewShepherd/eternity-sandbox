@@ -51,24 +51,38 @@ namespace Eternity.WpfApp
 
 	public static class CanvasItemExtensions
 	{
-		internal static Func<Placement, int, CanvasPieceItem> CreateCanvasPieceItemGenerator(
+		internal static Func<
+			Placement, 
+			int, 
+			IEnumerable<CanvasPieceItem>
+		> CreateCanvasPieceItemGenerator(
 			double imageWidth,
 			double imageHeight,
-			IReadOnlyList<BitmapImage> images
+			IReadOnlyList<BitmapImage?> triangleImages,
+			Placements placements
 		)
 		{
 			return (placement, index) =>
 			{
 				var position = Positions.PositionLookup[index];
-				return new CanvasPieceItem
-				{
-					ImageSource = images[placement.PieceIndex],
-					Left = position.X * imageWidth,
-					Top = position.Y * imageHeight,
-					Width = imageWidth,
-					Height = imageHeight,
-					Rotation = (int)placement.Rotations[0] * 90,
-				};
+				var left = position.X * imageWidth;
+				var top = position.Y * imageHeight;
+				var pieceSides = placements.PieceSides[placement.PieceIndex];
+				return pieceSides.Select(
+					(pieceSideId, index) =>
+					{
+						// Not sure about the rotation
+						return new CanvasPieceItem
+						{
+							ImageSource = triangleImages[pieceSideId]!,
+							Height = imageHeight,
+							Left = left,
+							Top = top,
+							Width = imageWidth,
+							Rotation = ((int)placement.Rotations[0] + index) % 4 * 90
+						};
+					}
+				);
 			};
 		}
 
@@ -99,16 +113,19 @@ namespace Eternity.WpfApp
 		internal static IEnumerable<CanvasPieceItem> GenerateCanvasPieceItems(
 			double pieceWidth,
 			double pieceHeight,
-			IReadOnlyList<BitmapImage> images,
-			IReadOnlyList<Placement?> placements)
+			IReadOnlyList<BitmapImage?> triangleImages,
+			Placements placements)
 		{
-			var g = CreateCanvasPieceItemGenerator(pieceWidth, pieceHeight, images);
-			for(int i = 0; i < placements.Count; ++i)
+			var g = CreateCanvasPieceItemGenerator(pieceWidth, pieceHeight, triangleImages, placements);
+			for(int i = 0; i < placements.Values.Count; ++i)
 			{
-				var item = placements[i];
-				if (item != null)
+				var placement = placements.Values[i];
+				if (placement != null)
 				{
-					yield return g(item, i);
+					foreach(var item in g(placement, i))
+					{
+						yield return item;
+					}
 				}
 			}
 		}

@@ -78,18 +78,20 @@ namespace Eternity.WpfApp
 			);
 
 
+
+
 		private static IEnumerable<CanvasItem> GenerateCanvasItems(
 			double bitmapWidth,
 			double bitmapHeight,
-			ImmutableList<BitmapImage> bitmapImages,
+			ImmutableArray<BitmapImage?> triangleImages,
 			Placements placements,
 			int selectedSequenceIndex)
 		{
 			var pieceItems = CanvasItemExtensions.GenerateCanvasPieceItems(
 				bitmapWidth,
 				bitmapHeight,
-				bitmapImages,
-				placements.Values
+				triangleImages,
+				placements
 			);
 
 			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintItem(
@@ -122,9 +124,37 @@ namespace Eternity.WpfApp
 			return canvasItems;
 		}
 
+
+		private ImmutableArray<BitmapImage?>? _triangles;
+
+		private static BitmapImage?[] LoadTriangles()
+		{
+			string?[] imageIds = new string?[24];
+			for(int i = 0; i < 24; ++i)
+			{
+				imageIds[i] = $"triangle_{i:d2}.png";
+			}
+			imageIds[22] = null;
+			BitmapImage?[] result = new BitmapImage?[imageIds.Length];
+			for(int i = 0; i < imageIds.Length; ++i)
+			{
+				string? imageId = imageIds[i];
+				if (imageId != null)
+				{
+					var stream = ImageProvider.Load(imageId);
+					if (stream != null)
+					{
+						result[i] = CreateFromStream(stream);
+					}
+				}
+			}
+			return result;
+		}
+
 		private async Task GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
 		{
 			var bitmapImages = await _fetchBitmapImages;
+			var triangleImages = _triangles ?? LoadTriangles().ToImmutableArray();
 
 			var boardSideLength = Math.Min(
 				canvasItemGenerationParameters.CanvasSize.Width,
@@ -134,7 +164,7 @@ namespace Eternity.WpfApp
 			var canvasItems = GenerateCanvasItems(
 				squareSideLength,
 				squareSideLength,
-				bitmapImages,
+				triangleImages,
 				canvasItemGenerationParameters.Placements,
 				canvasItemGenerationParameters.SelectedSequenceIndex
 			);
@@ -162,6 +192,10 @@ namespace Eternity.WpfApp
 
 			var placements = this.Placements;
 			if (placements == null)
+			{
+				return;
+			}
+			if (placements.PieceSides.Count == 0)
 			{
 				return;
 			}
