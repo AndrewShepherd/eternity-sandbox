@@ -92,7 +92,7 @@ namespace Eternity
 				Top = ImmutableHashSet<int>.Empty,
 			};
 			var patterns = this.PiecePatternLookup[placement.PieceIndex];
-			foreach(var rotation in placement.Rotations)
+			foreach (var rotation in placement.Rotations)
 			{
 				var rotated = RotationExtensions.Rotate(patterns, rotation);
 				newPatternConstraints = new MultiPatternConstraints
@@ -103,7 +103,8 @@ namespace Eternity
 					Right = newPatternConstraints.Right.Add(rotated[EdgeIndexes.Right])
 				};
 			}
-			return this with { 
+			return this with
+			{
 				Pieces = new[] { placement.PieceIndex }.ToImmutableHashSet(),
 				PatternConstraints = newPatternConstraints
 			};
@@ -181,39 +182,6 @@ namespace Eternity
 			return rv;
 		}
 
-		private (MultiPatternConstraints, ImmutableHashSet<int>) AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
-			MultiPatternConstraints patterns,
-			ImmutableHashSet<int> pieces)
-		{
-			var newPatterns = AdjustPatternConstraintsBasedOnAvailablePieces(pieces, patterns);
-			if (newPatterns.IsEquivalentTo(patterns))
-			{
-				return (patterns, pieces);
-			}
-			else
-			{
-				return FilterSetBasedOnPatternsRecursive(newPatterns, pieces);
-			}
-		}
-
-		private (MultiPatternConstraints, ImmutableHashSet<int>) FilterSetBasedOnPatternsRecursive(
-			MultiPatternConstraints patterns,
-			ImmutableHashSet<int> pieces)
-		{
-			var newPieces = FilterSetBasedOnPatterns(pieces, patterns);
-			if (newPieces.IsEquivalentTo(pieces))
-			{
-				return (patterns, pieces);
-			}
-			else
-			{
-				return AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
-					patterns,
-					newPieces
-				);
-			}
-		}
-
 		private SquareConstraint ModifyPatternConstraints(
 			Func<MultiPatternConstraints, MultiPatternConstraints> transform
 		)
@@ -223,18 +191,18 @@ namespace Eternity
 			{
 				return this;
 			}
-			else
+			var newPieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints);
+
+			newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+				newPieces,
+				newConstraints
+			);
+
+			return this with
 			{
-				(newConstraints, var newPieces) = AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
-					newConstraints,
-					this.Pieces
-				);
-				return this with
-				{
-					PatternConstraints = newConstraints,
-					Pieces = newPieces
-				};
-			}
+				PatternConstraints = newConstraints,
+				Pieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints)
+			};
 		}
 
 		public SquareConstraint RemovePossiblePiece(
@@ -243,9 +211,10 @@ namespace Eternity
 		{
 			if (Pieces.Contains(pieceIndex))
 			{
-				var (newConstraints, newPieces) = AdjustPatternConstraintsBasedOnAvailablePiecesRecursive(
-					this.PatternConstraints,
-					this.Pieces.Remove(pieceIndex)
+				var newPieces = this.Pieces.Remove(pieceIndex);
+				var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+					newPieces,
+					this.PatternConstraints
 				);
 				return this with
 				{
@@ -274,17 +243,17 @@ namespace Eternity
 		public SquareConstraint ConstrainLeftPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
-			mp => 
-				mp with 
-				{ 
-					Left = ImmutableHashSetExtensions.Constrain(mp.Left, patterns) 
+			mp =>
+				mp with
+				{
+					Left = ImmutableHashSetExtensions.Constrain(mp.Left, patterns)
 				}
 		);
 
 		public SquareConstraint ConstrainTopPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
-			mp => 
+			mp =>
 				mp with
 				{
 					Top = ImmutableHashSetExtensions.Constrain(mp.Top, patterns)
@@ -294,19 +263,19 @@ namespace Eternity
 		public SquareConstraint ConstrainBottomPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
-			mp => 
-				mp with 
-				{ 
-					Bottom = ImmutableHashSetExtensions.Constrain(mp.Bottom, patterns) 
+			mp =>
+				mp with
+				{
+					Bottom = ImmutableHashSetExtensions.Constrain(mp.Bottom, patterns)
 				}
 		);
 
 		public SquareConstraint ConstrainRightPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
-			mp => 
-				mp with 
-				{ 
+			mp =>
+				mp with
+				{
 					Right = ImmutableHashSetExtensions.Constrain(mp.Right, patterns)
 				}
 		);
@@ -323,7 +292,7 @@ namespace Eternity
 			mp => mp with { Bottom = new[] { pattern }.ToImmutableHashSet() }
 		);
 	}
-	
+
 	public static class SquareConstraintExtensions
 	{
 		public static ImmutableHashSet<int> AllPieces = Enumerable.Range(0, 256).ToImmutableHashSet();
@@ -345,7 +314,7 @@ namespace Eternity
 		{
 			var position = Positions.PositionLookup[positionIndex];
 			var adjacentPosition = t(position);
-			if(Positions.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
+			if (Positions.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
 			{
 				return new int?(result);
 			}
@@ -384,7 +353,7 @@ namespace Eternity
 					if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
 					{
 						var thePieceIndex = after.Pieces.First();
-						for(var i = 0; i < 256; ++i)
+						for (var i = 0; i < 256; ++i)
 						{
 							if (i != constraintIndex)
 							{
@@ -467,7 +436,7 @@ namespace Eternity
 			{
 				PiecePatternLookup = pieceSides
 			};
-			for(int placementIndex = 0; placementIndex < 256; ++placementIndex)
+			for (int placementIndex = 0; placementIndex < 256; ++placementIndex)
 			{
 				constraintsArray[placementIndex] = initialConstraint;
 			}
