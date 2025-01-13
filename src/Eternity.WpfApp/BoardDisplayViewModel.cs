@@ -79,7 +79,7 @@ namespace Eternity.WpfApp
 				placements
 			);
 
-			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintItem(
+			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintNumber(
 				bitmapWidth,
 				bitmapHeight,
 				placements.Constraints

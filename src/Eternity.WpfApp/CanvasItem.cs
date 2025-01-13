@@ -2,6 +2,8 @@
 namespace Eternity.WpfApp
 {
 	using System;
+	using System.Collections.Immutable;
+	using System.Data;
 	using System.Windows.Media.Imaging;
 
 	public interface CanvasItem
@@ -86,7 +88,7 @@ namespace Eternity.WpfApp
 			};
 		}
 
-		internal static IEnumerable<CanvasConstraintItem> GenerateCanvasConstraintItem(
+		internal static IEnumerable<CanvasConstraintItem> GenerateCanvasConstraintNumber(
 			double squareWidth,
 			double squareHeight,
 			IReadOnlyList<SquareConstraint> constraints
@@ -116,15 +118,54 @@ namespace Eternity.WpfApp
 			IReadOnlyList<BitmapImage?> triangleImages,
 			Placements placements)
 		{
-			var g = CreateCanvasPieceItemGenerator(pieceWidth, pieceHeight, triangleImages, placements);
-			for(int i = 0; i < placements.Values.Count; ++i)
+			var g = CreateCanvasPieceItemGenerator(
+				pieceWidth, 
+				pieceHeight, 
+				triangleImages, 
+				placements
+			);
+
+			CanvasPieceItem? RenderFromPatternConstraints(
+				int placementIndex,
+				ImmutableHashSet<int> constraints,
+				int rotation
+			)
 			{
-				var placement = placements.Values[i];
-				if (placement != null)
+				if (constraints.Count != 1)
 				{
-					foreach(var item in g(placement, i))
+					return null;
+				}
+				var position = Positions.PositionLookup[placementIndex];
+				var image = triangleImages[constraints.First()];
+				var left = position.X * pieceWidth;
+				var top = position.Y * pieceHeight;
+				return new CanvasPieceItem
+				{
+					Height = pieceHeight,
+					Width = pieceWidth,
+					ImageSource = image,
+					Left = left,
+					Top = top,
+					Rotation = rotation
+				};
+			}
+			for(int placementIndex = 0; placementIndex < placements.Constraints.Count; ++placementIndex)
+			{
+				var patternConstraints = placements.Constraints[placementIndex].PatternConstraints;
+				var boogles = new[]
+				{
+					(patternConstraints.Top, 0),
+					(patternConstraints.Right, 90),
+					(patternConstraints.Bottom, 180),
+					(patternConstraints.Left, 270)
+				};
+				foreach(var b in boogles)
+				{
+					var (c, r) = b;
+					var pieceItem = RenderFromPatternConstraints(placementIndex, c, r);
+					if (pieceItem != null)
 					{
-						yield return item;
+						yield return pieceItem;
 					}
 				}
 			}
