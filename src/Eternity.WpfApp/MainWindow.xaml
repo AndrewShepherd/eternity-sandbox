@@ -13,18 +13,35 @@
 			<Setter Property="Margin" Value="3,3,3,3" />
 			<Setter Property="Padding" Value="3,3,3,3" />
 		</Style>
+		
 	</Window.Resources>
+	<Window.CommandBindings>
+		<CommandBinding 
+			Command="{x:Static local:MainWindow.ExitCommand}"
+			Executed="ExitCommand_Executed"	
+		/>
+	</Window.CommandBindings>
 	<Grid DataContext="{StaticResource MainWindowViewModel}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*" />
 			<ColumnDefinition Width="Auto" />
 		</Grid.ColumnDefinitions>
+		<Menu Grid.Row="0" Grid.ColumnSpan="2">
+			<MenuItem Header="_File">
+				<MenuItem Header="E_xit" Command="{x:Static local:MainWindow.ExitCommand}" />
+			</MenuItem>
+		</Menu>
 		<local:BoardDisplay
 			Grid.Column="0"
+			Grid.Row="1"
 			SelectedSequenceIndex="{Binding SelectedSequenceIndex}"
 			Placements="{Binding Placements}"
 		/>
-		<StackPanel Orientation="Vertical" Grid.Column="1">
+		<StackPanel Orientation="Vertical" Grid.Column="1" Grid.Row="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
 				<Button Command="{Binding ResetSequenceCommand}">
 					Reset

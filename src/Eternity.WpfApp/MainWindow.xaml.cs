@@ -16,6 +16,7 @@ namespace Eternity.WpfApp
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		public static RoutedCommand ExitCommand = new();
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -26,6 +27,11 @@ namespace Eternity.WpfApp
 			var viewModel = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
 			viewModel?.OnClosed();
 			base.OnClosed(e);
+		}
+
+		private void ExitCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+		{
+			this.Close();
 		}
 	}
 }
