@@ -9,11 +9,13 @@ namespace Eternity
 {
 	public static class Positions
 	{
+		[Obsolete("Using the hardcoded positions!")]
 		public static IReadOnlyList<Position> PositionLookup
 		{
 			get;
-		} = GeneratePositions();
+		} = GeneratePositions(256);
 
+		[Obsolete("Using the harcoded positions!")]
 		public static IReadOnlyDictionary<Position, int> ReversePositionLookup
 		{
 			get;
@@ -21,34 +23,20 @@ namespace Eternity
 				(position, index) => KeyValuePair.Create(position, index)
 		).ToDictionary();
 
-		private static Position[] GeneratePositions()
+		public static Position[] GeneratePositions(int length)
 		{
-			var rv = new Position[256];
-			rv[0] = new Position(0, 0);
-			rv[1] = new Position(15, 0);
-			rv[2] = new Position(15, 15);
-			rv[3] = new Position(0, 15);
-			var targetIndex = 4;
-			for (var x = 1; x < 15; ++x)
+			var sideLength = (int)Math.Sqrt(length);
+			if (sideLength * sideLength != length)
 			{
-				rv[targetIndex++] = new Position(x, 0);
+				throw new Exception("Generating positions - not a square number!");
 			}
-			for (var y = 1; y < 15; ++y)
-			{
-				rv[targetIndex++] = new Position(15, y);
-			}
-			for (var x = 14; x > 0; --x)
-			{
-				rv[targetIndex++] = new Position(x, 15);
-			}
-			for (var y = 14; y > 0; --y)
-			{
-				rv[targetIndex++] = new Position(0, y);
-			}
-			int minRow = 1;
-			int maxRow = 14;
-			int minCol = 1;
-			int maxCol = 14;
+			var rv = new Position[length];
+			var targetIndex = 0;
+
+			int minRow = 0;
+			int maxRow = sideLength - 1;
+			int minCol = 0;
+			int maxCol = sideLength - 1;
 			while ((minRow <= maxRow) && (minCol <= maxCol))
 			{
 				for (var x = minCol; x <= maxCol; ++x)

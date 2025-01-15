@@ -6,7 +6,7 @@ namespace Eternity
 	{
 		const string JsonResource = "Eternity.Resources.pieces.json";
 
-		private static int[] ConvertToSides(string s) =>
+		public static int[] ConvertToSides(string s) =>
 			s.ToCharArray()
 			.Select(
 				c => c - 'a'

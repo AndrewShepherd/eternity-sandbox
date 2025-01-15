@@ -244,17 +244,25 @@
 
 		public IReadOnlyList<int> Sequence => this._sequence.Value;
 
-		private async void SetUpObservables()
+		public void SetPieceSides(IReadOnlyList<ImmutableArray<int>> pieceSides)
+		{
+			_solutionState = new SolutionState(pieceSides);
+			var placements = Placements.CreateInitial(pieceSides);
+			this._placements.OnNext(placements);
+			this.SetSequence(FirstSequence);
+		}
+
+		private async void SetInitialData()
 		{
 			var pieces = await PuzzleProvider.LoadPieces();
-
-
-
 			var puzzleEnvironment = await _generatePuzzleEnvironmentTask;
-			_solutionState = new SolutionState(puzzleEnvironment);
+			this.SetPieceSides(puzzleEnvironment.PieceSides);
+		}
 
-			var placements = Placements.CreateInitial(puzzleEnvironment.PieceSides);
-			this._placements.OnNext(placements);
+		private void SetUpObservables()
+		{
+			this.SelectedSequenceIndex = -1;
+
 			var selectedSequenceIndexObservable = Observable.FromEventPattern<
 				PropertyChangedEventHandler,
 				PropertyChangedEventArgs
@@ -285,7 +293,7 @@
 					}
 				);
 
-			this.SelectedSequenceIndex = -1;
+
 			_sequence
 				.Sample(TimeSpan.FromSeconds(0.1))
 				//.ObserveOn(SynchronizationContext.Current!)
@@ -315,7 +323,7 @@
 			);
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
 			SetUpObservables();
-			this.SetSequence(FirstSequence);
+			SetInitialData();
 		}
 	}
 }

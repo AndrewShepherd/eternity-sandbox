@@ -11,9 +11,8 @@
 	//
 	public class Placements
 	{
-		private static ImmutableArray<Placement?> EmptyPlacements = new Placement?[256].ToImmutableArray();
 		private static ImmutableArray<bool> NoUsedPieceIndexes = new bool[256].ToImmutableArray();
-		private ImmutableArray<Placement?> _placements = EmptyPlacements;
+		private ImmutableArray<Placement?> _placements = [];
 		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
 
 		private ImmutableArray<SquareConstraint> _constraints;
@@ -38,7 +37,12 @@
 					throw new Exception("Attempting to set a position that's already been set");
 				}
 			}
-			var newConstraints = _constraints.SetPlacement(positionIndex, placement);
+
+			var newConstraints = _constraints.SetPlacement(
+				positionIndex, 
+				placement, 
+				this.Positioner
+			);
 			if (newConstraints == null)
 			{
 				return null;
@@ -47,6 +51,7 @@
 			{
 				return new Placements
 				{
+					Positioner = this.Positioner,
 					PieceSides = this.PieceSides,
 					_placements = _placements.SetItem(positionIndex, placement),
 					_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
@@ -57,7 +62,8 @@
 
 		public IReadOnlyList<Placement?> Values => _placements;
 
-		public IReadOnlyList<ImmutableArray<int>> PieceSides { get; private init; } = [];
+		public required IReadOnlyList<ImmutableArray<int>> PieceSides { get; init; }
+		public required Positioner Positioner { get; init; }
 
 		public bool ContainsPieceIndex(int pieceIndex) => _usedPieceIndexes[pieceIndex];
 
@@ -76,6 +82,8 @@
 			{
 				return new Placements
 				{
+					Positioner = Positioner.Generate(pieceSides.Count),
+					_placements = new Placement?[pieceSides.Count].ToImmutableArray(),
 					PieceSides = pieceSides,
 					_constraints = (ImmutableArray<SquareConstraint>) initialConstraints
 				};

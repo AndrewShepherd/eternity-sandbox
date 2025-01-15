@@ -135,7 +135,7 @@ namespace Eternity.WpfApp
 				{
 					return null;
 				}
-				var position = Positions.PositionLookup[placementIndex];
+				var position = placements.Positioner.PositionLookup[placementIndex];
 				var image = triangleImages[constraints.First()];
 				var left = position.X * pieceWidth;
 				var top = position.Y * pieceHeight;

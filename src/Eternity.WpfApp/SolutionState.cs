@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace Eternity.WpfApp
 		private PlacementStack _placementStack = new PlacementStack();
 		private int _badSequenceIndex = -1;
 
-		private readonly PuzzleEnvironment _puzzleEnvironment;
+		private readonly IReadOnlyList<ImmutableArray<int>> _pieceSides;
 
 		public int BadSequenceIndex => _badSequenceIndex;
 
@@ -19,16 +20,16 @@ namespace Eternity.WpfApp
 		{
 			var pieceIndexes = Sequence.GeneratePieceIndexes(sequence);
 			(int successfulAdds, Placements placements) = _placementStack.ApplyPieceOrder(
-				_puzzleEnvironment,	
+				this._pieceSides,	
 				Sequence.GeneratePieceIndexes(sequence)
 			);
 			_badSequenceIndex = Sequence.ListPlacementIndexToSequenceIndex(successfulAdds);
 			return placements;
 		}
 
-		public SolutionState(PuzzleEnvironment puzzleEnvironment)
+		public SolutionState(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			_puzzleEnvironment = puzzleEnvironment;
+			_pieceSides = pieceSides;
 		}
 	}
 }

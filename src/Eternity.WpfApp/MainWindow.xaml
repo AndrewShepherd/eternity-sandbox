@@ -20,6 +20,10 @@
 			Command="{x:Static local:MainWindow.ExitCommand}"
 			Executed="ExitCommand_Executed"	
 		/>
+		<CommandBinding
+			Command="{x:Static ApplicationCommands.Open}"
+			Executed="OpenCommand_Executed"
+			/>
 	</Window.CommandBindings>
 	<Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.RowDefinitions>
@@ -32,6 +36,7 @@
 		</Grid.ColumnDefinitions>
 		<Menu Grid.Row="0" Grid.ColumnSpan="2">
 			<MenuItem Header="_File">
+				<MenuItem Header="_Open" Command="{x:Static ApplicationCommands.Open}" />
 				<MenuItem Header="E_xit" Command="{x:Static local:MainWindow.ExitCommand}" />
 			</MenuItem>
 		</Menu>

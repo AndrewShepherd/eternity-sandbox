@@ -57,7 +57,7 @@ namespace Eternity
 
 	public record class SquareConstraint
 	{
-		public ImmutableHashSet<int> Pieces { get; init; } = SquareConstraintExtensions.AllPieces;
+		public required ImmutableHashSet<int> Pieces { get; init; }
 
 		public MultiPatternConstraints PatternConstraints = new()
 		{
@@ -295,8 +295,6 @@ namespace Eternity
 
 	public static class SquareConstraintExtensions
 	{
-		public static ImmutableHashSet<int> AllPieces = Enumerable.Range(0, 256).ToImmutableHashSet();
-
 		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 24).ToImmutableHashSet();
 
 
@@ -310,11 +308,11 @@ namespace Eternity
 				&& c1.PatternConstraints.IsEquivalentTo(c2.PatternConstraints)
 			);
 
-		private static int? TransformPositionIndex(int positionIndex, Func<Position, Position> t)
+		private static int? TransformPositionIndex(Positioner positioner, int positionIndex, Func<Position, Position> t)
 		{
-			var position = Positions.PositionLookup[positionIndex];
+			var position = positioner.PositionLookup[positionIndex];
 			var adjacentPosition = t(position);
-			if (Positions.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
+			if (positioner.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
 			{
 				return new int?(result);
 			}
@@ -326,7 +324,8 @@ namespace Eternity
 
 		private static ImmutableArray<SquareConstraint>? ProcessQueue(
 			ImmutableArray<SquareConstraint> constraints,
-			SquareConstraintTransformQueue q
+			SquareConstraintTransformQueue q,
+			Positioner positioner
 		)
 		{
 			while (true)
@@ -353,7 +352,7 @@ namespace Eternity
 					if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
 					{
 						var thePieceIndex = after.Pieces.First();
-						for (var i = 0; i < 256; ++i)
+						for (var i = 0; i < constraints.Length; ++i)
 						{
 							if (i != constraintIndex)
 							{
@@ -367,6 +366,7 @@ namespace Eternity
 					if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
 					{
 						var adjPositionIndex = TransformPositionIndex(
+							positioner,
 							constraintIndex,
 							Positions.Left
 						);
@@ -382,6 +382,7 @@ namespace Eternity
 					if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
 					{
 						var adjPositionIndex = TransformPositionIndex(
+							positioner,
 							constraintIndex,
 							Positions.Above
 						);
@@ -397,6 +398,7 @@ namespace Eternity
 					if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
 					{
 						var adjPositionIndex = TransformPositionIndex(
+							positioner,
 							constraintIndex,
 							Positions.Right
 						);
@@ -412,6 +414,7 @@ namespace Eternity
 					if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
 					{
 						var adjPositionIndex = TransformPositionIndex(
+							positioner,
 							constraintIndex,
 							Positions.Below
 						);
@@ -431,21 +434,28 @@ namespace Eternity
 
 		public static ImmutableArray<SquareConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			var constraintsArray = new SquareConstraint[256];
+			var constraintsArray = new SquareConstraint[pieceSides.Count];
+
+			ImmutableHashSet<int> AllPieces = Enumerable.Range(0, pieceSides.Count)
+				.ToImmutableHashSet();
+
 			var initialConstraint = new SquareConstraint
 			{
+				Pieces = AllPieces,
 				PiecePatternLookup = pieceSides
 			};
-			for (int placementIndex = 0; placementIndex < 256; ++placementIndex)
+			for (int placementIndex = 0; placementIndex < constraintsArray.Length; ++placementIndex)
 			{
 				constraintsArray[placementIndex] = initialConstraint;
 			}
+			var positioner = Positioner.Generate(pieceSides.Count);
 
 			var constraints = constraintsArray.ToImmutableArray();
 			var q = new SquareConstraintTransformQueue();
-			for (int placementIndex = 0; placementIndex < 256; ++placementIndex)
+			int sideLength = (int)(Math.Round(Math.Sqrt(pieceSides.Count)));
+			for (int placementIndex = 0; placementIndex < pieceSides.Count; ++placementIndex)
 			{
-				var position = Positions.PositionLookup[placementIndex];
+				var position = positioner.PositionLookup[placementIndex];
 				if (position.X == 0)
 				{
 					q.Push(placementIndex, c => c.SetLeftPattern(23));
@@ -454,22 +464,24 @@ namespace Eternity
 				{
 					q.Push(placementIndex, c => c.SetTopPattern(23));
 				}
-				if (position.X == 15)
+				if (position.X == sideLength-1)
 				{
 					q.Push(placementIndex, c => c.SetRightPattern(23));
 				}
-				if (position.Y == 15)
+				if (position.Y == sideLength-1)
 				{
 					q.Push(placementIndex, c => c.SetBottomPattern(23));
 				}
 			}
-			return ProcessQueue(constraints, q);
+			return ProcessQueue(constraints, q, positioner);
 		}
 
 		public static ImmutableArray<SquareConstraint>? SetPlacement(
 			this ImmutableArray<SquareConstraint> constraints,
 			int positionIndex,
-			Placement placement)
+			Placement placement,
+			Positioner positioner
+			)
 		{
 			var q = new SquareConstraintTransformQueue();
 			for (int i = 0; i < constraints.Length; ++i)
@@ -483,7 +495,7 @@ namespace Eternity
 					q.Push(i, c => c.RemovePossiblePiece(placement.PieceIndex));
 				}
 			}
-			return ProcessQueue(constraints, q);
+			return ProcessQueue(constraints, q, positioner);
 		}
 	}
 }

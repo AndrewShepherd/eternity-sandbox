@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Eternity.WpfApp
+﻿namespace Eternity
 {
+	using System.Collections.Immutable;
 
-	static class PuzzleSolver
-    {
+	public static class PuzzleSolver
+	{
 		private static IEnumerable<Position> GetAdjacentPositions(Position p)
 		{
 			if (p.X > 0)
@@ -30,26 +24,34 @@ namespace Eternity.WpfApp
 			}
 		}
 
-		private static IEnumerable<int> GetAdjacentPlacementIndexes(PuzzleEnvironment puzzleEnvironment, int placementIndex)
+
+		private static IEnumerable<int> GetAdjacentPlacementIndexes(
+			int placementIndex,
+			Positioner positioner
+		)
 		{
-			var thisPosition = Positions.PositionLookup[placementIndex];
-			return GetAdjacentPositions(thisPosition)
-				.Select(p => Positions.ReversePositionLookup[p]);
+			var thisPosition = positioner.PositionLookup[placementIndex];
+			foreach(var position in GetAdjacentPositions(thisPosition))
+			{
+				if (positioner.ReversePositionLookup.TryGetValue(position, out var index))
+				{
+					yield return index;
+				}
+			}
 		}
 
 		private static IEnumerable<int?> GetAdjacentSideColor(
-			PuzzleEnvironment puzzleEnvironment,
 			Position position,
 			Placements existingPlacements,
 			int edgeIndex
 		)
 		{
-			if (Positions.ReversePositionLookup.TryGetValue(position, out var placementIndex))
+			if (existingPlacements.Positioner.ReversePositionLookup.TryGetValue(position, out var placementIndex))
 			{
 				var adjacentPlacement = existingPlacements.Values[placementIndex];
 				if (adjacentPlacement != null)
 				{
-					var adjacentColors = puzzleEnvironment.PieceSides[adjacentPlacement.PieceIndex];
+					var adjacentColors = existingPlacements.PieceSides[adjacentPlacement.PieceIndex];
 					return adjacentPlacement.Rotations.Select(
 						r => RotationExtensions.Rotate(adjacentColors, r)
 					).Select(topColorsRotated => topColorsRotated[edgeIndex])
@@ -60,18 +62,16 @@ namespace Eternity.WpfApp
 		}
 
 		private static IEnumerable<EdgeRequirements> GetEdgeRequirements(
-			PuzzleEnvironment puzzleEnvironment,
 			Placements existingPlacements,
 			int targetPositionIndex
 		)
 		{
 			Func<int, int, int, IEnumerable<int?>> getAdjacentSideColor = (x, y, edgeIndex) => GetAdjacentSideColor(
-				puzzleEnvironment,
 				new Position(x, y),
 				existingPlacements,
 				edgeIndex
 			);
-			var target = Positions.PositionLookup[targetPositionIndex];
+			var target = existingPlacements.Positioner.PositionLookup[targetPositionIndex];
 
 			IEnumerable<int?> edgeColor = [23];
 
@@ -107,20 +107,18 @@ namespace Eternity.WpfApp
 		];
 
 		private static Rotation[] GetPossibleRotations(
-			PuzzleEnvironment puzzleEnvironment,
 			int positionIndex,
 			int pieceIndex,
 			Placements listPlacements
 		)
 		{
-			var sides = puzzleEnvironment.PieceSides[pieceIndex];
+			;
 			var edgeRequirements = GetEdgeRequirements(
-				puzzleEnvironment,
 				listPlacements,
 				positionIndex
 			);
 			return edgeRequirements.SelectMany(
-				er => GetRotations(sides, er)
+				er => GetRotations(listPlacements.PieceSides[pieceIndex], er)
 			).ToArray();
 		}
 
@@ -129,7 +127,7 @@ namespace Eternity.WpfApp
 			EdgeRequirements edgeRequirements
 		)
 		{
-			foreach(var rotation in AllRotations)
+			foreach (var rotation in AllRotations)
 			{
 				var rotatedSides = RotationExtensions.Rotate(sides, rotation);
 				EdgeRequirements thisRequirements = new EdgeRequirements(
@@ -146,7 +144,6 @@ namespace Eternity.WpfApp
 		}
 
 		public static Placements? TryAddPiece(
-			PuzzleEnvironment puzzleEnvironment,
 			Placements listPlacements,
 			int positionIndex,
 			int pieceIndex
@@ -175,7 +172,6 @@ namespace Eternity.WpfApp
 			}
 
 			var rotations = PuzzleSolver.GetPossibleRotations(
-				puzzleEnvironment,
 				positionIndex,
 				pieceIndex,
 				listPlacements
@@ -196,7 +192,10 @@ namespace Eternity.WpfApp
 			// There may be existing placements which had multiple rotations
 			// as a result of placing this piece they may no longer have multiple
 			// rotations
-			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(puzzleEnvironment, positionIndex)
+			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(
+				positionIndex,
+				listPlacements.Positioner
+			)
 				.Where(
 					pi => listPlacements.Values[pi] != null
 					&& listPlacements.Values[pi]!.Rotations.Length > 1
@@ -211,7 +210,6 @@ namespace Eternity.WpfApp
 						throw new Exception("This cannot have happend");
 					}
 					var newRotations = PuzzleSolver.GetPossibleRotations(
-						puzzleEnvironment,
 						adjacentPlacementIndex,
 						thisPlacement.PieceIndex,
 						listPlacements
@@ -239,7 +237,7 @@ namespace Eternity.WpfApp
 			}
 
 			List<int> positionsWithOneConstraint = [];
-			for(
+			for (
 				int constraintIndex = 0;
 				constraintIndex < listPlacements.Constraints.Count;
 				++constraintIndex
@@ -275,7 +273,6 @@ namespace Eternity.WpfApp
 				}
 				var p = positionsAndPieces.First();
 				return TryAddPiece(
-					puzzleEnvironment,
 					listPlacements,
 					p.PositionIndex,
 					p.PieceIndex

@@ -1,4 +1,9 @@
-﻿using System.Text;
+﻿using Microsoft.Win32;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -17,6 +22,8 @@ namespace Eternity.WpfApp
 	public partial class MainWindow : Window
 	{
 		public static RoutedCommand ExitCommand = new();
+
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -32,6 +39,22 @@ namespace Eternity.WpfApp
 		private void ExitCommand_Executed(object sender, ExecutedRoutedEventArgs e)
 		{
 			this.Close();
+		}
+
+		private void OpenCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+		{
+			OpenFileDialog openFileDialog = new OpenFileDialog();
+			if (openFileDialog.ShowDialog() == true)
+			{
+				var txt = File.ReadAllText(openFileDialog.FileName);
+				var pieces = PieceTextReader.Parse(txt);
+				var vm = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
+				if (vm != null)
+				{
+					vm.SetPieceSides(pieces);
+				}
+
+			}
 		}
 	}
 }

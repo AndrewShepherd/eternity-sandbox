@@ -1,4 +1,6 @@
-﻿namespace Eternity.WpfApp
+﻿using System.Collections.Immutable;
+
+namespace Eternity.WpfApp
 {
 	internal class PlacementStack
 	{
@@ -15,7 +17,7 @@
 
 		private Placements? _initialPlacements;
 		public (int, Placements) ApplyPieceOrder(
-			PuzzleEnvironment puzzleEnvironment,
+			IReadOnlyList<ImmutableArray<int>> pieceSides,
 			IEnumerable<int> pieceIndexes
 		)
 		{
@@ -23,7 +25,7 @@
 			var matchingStackEntryIndex = -1;
 			if (_initialPlacements == null)
 			{
-				_initialPlacements = Placements.CreateInitial(puzzleEnvironment.PieceSides);
+				_initialPlacements = Placements.CreateInitial(pieceSides);
 			}
 			Placements matchingPlacements = _initialPlacements; 
 
@@ -56,7 +58,6 @@
 			for (; true; ++i)
 			{
 				var newPlacements = PuzzleSolver.TryAddPiece(
-					puzzleEnvironment,
 					matchingPlacements,
 					i,
 					pieceIndexEnumerator.Current
