@@ -209,6 +209,9 @@
 					{
 						throw new Exception("This cannot have happend");
 					}
+					// This test isn't necessary anymore
+					// because of the constraint checking
+					// I added afterwards
 					var newRotations = PuzzleSolver.GetPossibleRotations(
 						adjacentPlacementIndex,
 						thisPlacement.PieceIndex,
