@@ -82,7 +82,8 @@ namespace Eternity.WpfApp
 			var constraintItems = CanvasItemExtensions.GenerateCanvasConstraintNumber(
 				bitmapWidth,
 				bitmapHeight,
-				placements.Constraints
+				placements.Constraints,
+				placements.Positioner
 			);
 
 			var canvasItems = pieceItems.Cast<CanvasItem>().Concat(constraintItems).ToList();
@@ -91,7 +92,7 @@ namespace Eternity.WpfApp
 			{
 				var highlightedPositionIndexes = SequenceIndexToPositionIndexes(selectedSequenceIndex);
 				var highlightedPositions = highlightedPositionIndexes
-					.Select(i => Positions.PositionLookup[i])
+					.Select(i => placements.Positioner.PositionLookup[i])
 					.ToArray();
 				foreach (var position in highlightedPositions)
 				{

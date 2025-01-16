@@ -1,17 +1,17 @@
-﻿using System.Collections.Immutable;
-
-namespace Eternity.WpfApp
+﻿namespace Eternity
 {
-	internal class PlacementStack
+	using System.Collections.Immutable;
+
+	public class PlacementStack
 	{
 		public record class StackEntry(int PieceIndex, Placements Placements);
 
 		public StackEntry?[] _stackEntries = new StackEntry?[256];
 
 		// Mutates the stack so that it gets as far as it can
-		// Returns the number of pieces in applied
+		// Returns the number of pieces it applied
 		// and the resulting Placements
-		// (Not that there may be more placements than asked for
+		// (Note that there may be more placements than asked for
 		// because squares which can only have one piece are automatically
 		// filled)
 
@@ -27,7 +27,7 @@ namespace Eternity.WpfApp
 			{
 				_initialPlacements = Placements.CreateInitial(pieceSides);
 			}
-			Placements matchingPlacements = _initialPlacements; 
+			Placements matchingPlacements = _initialPlacements;
 
 			var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
 			int i = 0;
@@ -78,7 +78,7 @@ namespace Eternity.WpfApp
 					break;
 				}
 			}
-			return (i, this._stackEntries.Last()!.Placements);
+			return (i, this._stackEntries[pieceSides.Count - 1]!.Placements);
 		}
 	}
 }

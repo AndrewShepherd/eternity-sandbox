@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Printing;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,8 +28,10 @@ namespace Eternity.WpfApp
 			return placements;
 		}
 
+		private readonly SequenceSpecs _sequenceSpecs;
 		public SolutionState(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
+			_sequenceSpecs = new SequenceSpecs(pieceSides.Count);
 			_pieceSides = pieceSides;
 		}
 	}

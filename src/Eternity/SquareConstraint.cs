@@ -53,6 +53,18 @@ namespace Eternity
 			&& left.Top.IsEquivalentTo(right.Top)
 			&& left.Right.IsEquivalentTo(right.Right)
 			&& left.Bottom.IsEquivalentTo(right.Bottom);
+
+		public static MultiPatternConstraints Intersect(
+			this MultiPatternConstraints m1,
+			MultiPatternConstraints m2
+		) =>
+			new MultiPatternConstraints
+			{
+				Left = m1.Left.Intersect(m2.Left),
+				Right = m1.Right.Intersect(m2.Right),
+				Top = m1.Top.Intersect(m2.Top),
+				Bottom = m1.Bottom.Intersect(m2.Bottom)
+			};
 	}
 
 	public record class SquareConstraint
@@ -106,7 +118,7 @@ namespace Eternity
 			return this with
 			{
 				Pieces = new[] { placement.PieceIndex }.ToImmutableHashSet(),
-				PatternConstraints = newPatternConstraints
+				PatternConstraints = newPatternConstraints.Intersect(this.PatternConstraints)
 			};
 		}
 
@@ -340,6 +352,11 @@ namespace Eternity
 				var after = before;
 				foreach (var t in transforms)
 				{
+					var afterTest = t(after);
+					if (afterTest.PatternConstraints.Right.Count > after.PatternConstraints.Right.Count)
+					{
+						throw new Exception("Gotcha!");
+					}
 					after = t(after);
 				}
 				if (!before.IsEquiavelentTo(after))

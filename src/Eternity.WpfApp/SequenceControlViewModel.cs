@@ -13,7 +13,7 @@ namespace Eternity.WpfApp
 
 	public class SequenceControlViewModel : INotifyPropertyChanged
 	{
-		private IReadOnlyList<int> _sequence = Eternity.Sequence.FirstSequence;
+		private IReadOnlyList<int> _sequence = new SequenceSpecs(256).GenerateFirst();
 
 		private IReadOnlyList<ValueAndDate>? _valuesAndDates = null;
 
@@ -72,11 +72,29 @@ namespace Eternity.WpfApp
 						).ToArray();
 					}
 
+					
 					for (int i = 0; i < _sequence.Count; i++)
 					{
 						var age = (DateTime.Now - _valuesAndDates[i].date);
-						this.SequenceListEntries[i].ForegroundColor = ConvertToForegroundColor(age);
-						this.SequenceListEntries[i].Value = _sequence[i];
+						if (i >= this.SequenceListEntries.Count)
+						{
+							this.SequenceListEntries.Add(
+								new()
+								{
+									ForegroundColor = ConvertToForegroundColor(age),
+									Value = _sequence[i]
+								}
+							);
+						}
+						else
+						{
+							this.SequenceListEntries[i].Value = _sequence[i];
+							this.SequenceListEntries[i].ForegroundColor = ConvertToForegroundColor(age);
+						}
+					}
+					while(this.SequenceListEntries.Count> _sequence.Count)
+					{
+						this.SequenceListEntries.RemoveAt(this.SequenceListEntries.Count - 1);
 					}
 					_propertyChanged?.Invoke(this, new(nameof(Sequence)));
 				}
@@ -107,7 +125,7 @@ namespace Eternity.WpfApp
 
 		public ObservableCollection<SequenceListEntry> SequenceListEntries { get; set; } =
 			new ObservableCollection<SequenceListEntry>(
-				Eternity.Sequence.Dimensions.Select(d => new SequenceListEntry { Value = 0 })
+				Enumerable.Range(0, 256).Select(d => new SequenceListEntry { Value = 0 })
 			);
 
 	}

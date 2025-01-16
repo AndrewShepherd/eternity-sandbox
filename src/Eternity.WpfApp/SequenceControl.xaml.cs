@@ -69,7 +69,7 @@ namespace Eternity.WpfApp
 			typeof(SequenceControl),
 			new PropertyMetadata
 			{
-				DefaultValue = Eternity.Sequence.FirstSequence,
+				DefaultValue = new SequenceSpecs(256).GenerateFirst(),
 				PropertyChangedCallback = SequenceChangedCallback
 			}
 		);

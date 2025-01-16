@@ -7,8 +7,6 @@
 	using System.Reactive.Linq;
 	using System.Windows.Input;
 	using System.Reactive.Threading.Tasks;
-	using System.IO;
-	using System.Windows.Media.Imaging;
 	using System.Collections.Immutable;
 
 
@@ -56,14 +54,13 @@
 			}
 		}
 
-
 		public ICommand GenerateRandomCommand => new DelegateCommand(
-			() => this.SetSequence(GenerateRandomSequence()),
+			() => this.SetSequence(_sequenceSpecs.GenerateRandomSequence()),
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
 		public ICommand ResetSequenceCommand => new DelegateCommand(
-			() => this.SetSequence(FirstSequence),
+			() => this.SetSequence(_sequenceSpecs.GenerateFirst()),
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
@@ -120,9 +117,9 @@
 			}
 		}
 
-		void StepForward() => Step((s, i) => s.Increment(i));
+		void StepForward() => Step(_sequenceSpecs.Increment);
 
-		void StepBackwards() => Step((s, i) => s.Decrement(i));
+		void StepBackwards() => Step(_sequenceSpecs.Decrement);
 
 		private void LoopUntilAnswerFound(
 			CancellationToken cancellationToken,
@@ -186,12 +183,12 @@
 
 		public void Start()
 		{
-			Go(Eternity.Sequence.Increment);
+			Go(_sequenceSpecs.Increment);
 		}
 
 		public void GoBackwards()
 		{
-			Go(Eternity.Sequence.Decrement);
+			Go(_sequenceSpecs.Decrement);
 		}
 
 		public void Stop()
@@ -212,11 +209,12 @@
 			var placements = _solutionState.SetSequence(sequence);
 			this._sequence.OnNext(sequence);
 			this._placements.OnNext(placements);
-
 		}
 
 
-		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(FirstSequence);
+		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(
+			new SequenceSpecs(256).GenerateFirst()
+		);
 		BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
@@ -244,12 +242,15 @@
 
 		public IReadOnlyList<int> Sequence => this._sequence.Value;
 
+		private SequenceSpecs _sequenceSpecs = new SequenceSpecs(256);
+
 		public void SetPieceSides(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
+			_sequenceSpecs = new SequenceSpecs(pieceSides.Count);
 			_solutionState = new SolutionState(pieceSides);
 			var placements = Placements.CreateInitial(pieceSides);
 			this._placements.OnNext(placements);
-			this.SetSequence(FirstSequence);
+			this.SetSequence(_sequenceSpecs.GenerateFirst());
 		}
 
 		private async void SetInitialData()

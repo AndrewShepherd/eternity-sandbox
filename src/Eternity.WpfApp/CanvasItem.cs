@@ -91,16 +91,16 @@ namespace Eternity.WpfApp
 		internal static IEnumerable<CanvasConstraintItem> GenerateCanvasConstraintNumber(
 			double squareWidth,
 			double squareHeight,
-			IReadOnlyList<SquareConstraint> constraints
-		)
+			IReadOnlyList<SquareConstraint> constraints,
+			Positioner positioner)
 		{
 			for(int i = 0; i < constraints.Count; ++i)
 			{
-				if (constraints[i].Pieces.Count == 1)
-				{
-					continue;
-				}
-				var position = Positions.PositionLookup[i];
+				//if (constraints[i].Pieces.Count == 1)
+				//{
+				//	continue;
+				//}
+				var position = positioner.PositionLookup[i];
 				yield return new CanvasConstraintItem
 				{
 					Left = position.X * squareWidth,
