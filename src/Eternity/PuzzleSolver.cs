@@ -106,41 +106,29 @@
 			Rotation.TwoSeventy
 		];
 
-		private static Rotation[] GetPossibleRotations(
+		private static List<Rotation> GetPossibleRotations(
 			int positionIndex,
 			int pieceIndex,
 			Placements listPlacements
 		)
 		{
-			;
-			var edgeRequirements = GetEdgeRequirements(
-				listPlacements,
-				positionIndex
-			);
-			return edgeRequirements.SelectMany(
-				er => GetRotations(listPlacements.PieceSides[pieceIndex], er)
-			).ToArray();
-		}
-
-		private static IEnumerable<Rotation> GetRotations(
-			ImmutableArray<int> sides,
-			EdgeRequirements edgeRequirements
-		)
-		{
-			foreach (var rotation in AllRotations)
+			var pc = listPlacements.Constraints[positionIndex].PatternConstraints;
+			var patterns = listPlacements.PieceSides[pieceIndex];
+			List<Rotation> result = new List<Rotation>();
+			foreach(var rotation in RotationExtensions.AllRotations)
 			{
-				var rotatedSides = RotationExtensions.Rotate(sides, rotation);
-				EdgeRequirements thisRequirements = new EdgeRequirements(
-					rotatedSides[EdgeIndexes.Left],
-					rotatedSides[EdgeIndexes.Top],
-					rotatedSides[EdgeIndexes.Right],
-					rotatedSides[EdgeIndexes.Bottom]
-				);
-				if (thisRequirements.CanMatch(edgeRequirements))
+				var rp = RotationExtensions.Rotate(patterns, rotation);
+				if (
+					pc.Left.Contains(rp[EdgeIndexes.Left])
+					&& pc.Top.Contains(rp[EdgeIndexes.Top])
+					&& pc.Right.Contains(rp[EdgeIndexes.Right])
+					&& pc.Bottom.Contains(rp[EdgeIndexes.Bottom])
+				)
 				{
-					yield return rotation;
+					result.Add(rotation);
 				}
 			}
+			return result;
 		}
 
 		public static Placements? TryAddPiece(
@@ -177,13 +165,14 @@
 				listPlacements
 			);
 
-			if (rotations.Length == 0)
+			if (rotations.Count == 0)
 			{
 				return null;
 			}
 
 
-			var attempt = listPlacements.SetItem(positionIndex, new Placement(pieceIndex, rotations));
+			var attempt = listPlacements.SetItem(
+				positionIndex,new Placement(pieceIndex, rotations.ToArray()));
 			if (attempt == null)
 			{
 				return null;
@@ -217,17 +206,17 @@
 						thisPlacement.PieceIndex,
 						listPlacements
 					);
-					if (newRotations.Length == 0)
+					if (newRotations.Count == 0)
 					{
 						throw new Exception("After placing a piece, an existing piece was in an illegal state");
 					}
-					if (newRotations.Length < thisPlacement.Rotations.Length)
+					if (newRotations.Count < thisPlacement.Rotations.Length)
 					{
 						var thisAttempt = listPlacements.SetItem(
 							adjacentPlacementIndex,
 							new(
 								thisPlacement.PieceIndex,
-								newRotations
+								newRotations.ToArray()
 							)
 						);
 						if (thisAttempt == null)
