@@ -44,6 +44,10 @@ namespace Eternity.WpfApp
 			{
 				if (_sequence != value)
 				{
+					if (_valuesAndDates != null && value.Count != _valuesAndDates.Count)
+					{
+						_valuesAndDates = null;
+					}
 					_sequence = value;
 					DateTime dateTimeNow = DateTime.Now;
 					if (_valuesAndDates == null)
@@ -75,6 +79,10 @@ namespace Eternity.WpfApp
 					
 					for (int i = 0; i < _sequence.Count; i++)
 					{
+						if (i >= _valuesAndDates.Count)
+						{
+							break;
+						}
 						var age = (DateTime.Now - _valuesAndDates[i].date);
 						if (i >= this.SequenceListEntries.Count)
 						{
@@ -96,9 +104,16 @@ namespace Eternity.WpfApp
 					{
 						this.SequenceListEntries.RemoveAt(this.SequenceListEntries.Count - 1);
 					}
-					_propertyChanged?.Invoke(this, new(nameof(Sequence)));
+					_notifier.PropertyChanged(nameof(Sequence));
 				}
 			}
+		}
+
+		private readonly ThreadSafePropertyChangedNotifier _notifier;
+
+		public SequenceControlViewModel()
+		{
+			_notifier = new(n => _propertyChanged?.Invoke(this, n));
 		}
 
 		private int _selectedSequenceIndex = -1;
