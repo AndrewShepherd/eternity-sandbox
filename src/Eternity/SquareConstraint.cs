@@ -194,6 +194,62 @@ namespace Eternity
 			return rv;
 		}
 
+		private(
+			MultiPatternConstraints,
+			ImmutableHashSet<int>
+		) UpdatePatternConstraintsBasedOnPiecesRecursive(
+			MultiPatternConstraints patternContraints,
+			ImmutableHashSet<int> pieces
+		)
+		{
+			var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+				pieces,
+				patternContraints
+			);
+			if (newConstraints.IsEquivalentTo(patternContraints))
+			{
+				return (
+					patternContraints, 
+					FilterSetBasedOnPatterns(pieces, patternContraints)
+				);
+			}
+			else
+			{
+				return UpdatePiecesBasedOnPatternConstraintsRecursive(
+					newConstraints,
+					pieces
+				);
+			}
+		}
+
+		private (
+			MultiPatternConstraints,
+			ImmutableHashSet<int>
+		) UpdatePiecesBasedOnPatternConstraintsRecursive(
+			MultiPatternConstraints patternContraints,
+			ImmutableHashSet<int> pieces
+		)
+		{
+			var newPieces = FilterSetBasedOnPatterns(pieces, patternContraints);
+			if (newPieces.IsEquivalentTo(pieces))
+			{
+				return (
+					AdjustPatternConstraintsBasedOnAvailablePieces(
+						newPieces,
+						patternContraints
+					), 
+					pieces
+				);
+			}
+			else
+			{
+				return UpdatePatternConstraintsBasedOnPiecesRecursive(
+					patternContraints,
+					pieces
+				);
+			}
+		}
+
 		private SquareConstraint ModifyPatternConstraints(
 			Func<MultiPatternConstraints, MultiPatternConstraints> transform
 		)
@@ -203,17 +259,14 @@ namespace Eternity
 			{
 				return this;
 			}
-			var newPieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints);
-
-			newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-				newPieces,
-				newConstraints
+			(newConstraints, var newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(
+				newConstraints,
+				this.Pieces
 			);
-
 			return this with
 			{
 				PatternConstraints = newConstraints,
-				Pieces = FilterSetBasedOnPatterns(this.Pieces, newConstraints)
+				Pieces = newPieces
 			};
 		}
 
