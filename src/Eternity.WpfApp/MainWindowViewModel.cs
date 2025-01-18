@@ -134,8 +134,6 @@
 				if (badIndex >= currentSequence.Count - 1)
 				{
 					// This is a success!
-					// We will never reach this code in a billion years
-					// but it's nice to dream
 					break;
 				}
 				currentSequence = transform(currentSequence, badIndex);
@@ -149,6 +147,7 @@
 					currentPlacements = placements;
 				}
 			}
+			this.State = new Stopped();
 		}
 
 		public RunningState State
