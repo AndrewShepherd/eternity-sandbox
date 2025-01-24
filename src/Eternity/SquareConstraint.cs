@@ -356,12 +356,39 @@ namespace Eternity
 		) => ModifyPatternConstraints(
 			mp => mp with { Bottom = new[] { pattern }.ToImmutableHashSet() }
 		);
+
+
+		public delegate (MultiPatternConstraints, ImmutableHashSet<int>) TransformAction(MultiPatternConstraints mpc, ImmutableHashSet<int> pieces);
+
+		public SquareConstraint Transform(IEnumerable<TransformAction> actions)
+		{
+			var newPatternConstraints = this.PatternConstraints;
+			var newPieces = this.Pieces;
+			foreach(var a in actions)
+			{
+				(newPatternConstraints, newPieces) = a(newPatternConstraints, newPieces);
+			}
+			if (!newPatternConstraints.IsEquivalentTo(this.PatternConstraints))
+			{
+				(newPatternConstraints, newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(newPatternConstraints, newPieces);
+			}
+			else if (!newPieces.IsEquivalentTo(this.Pieces))
+			{
+				(newPatternConstraints, newPieces) = UpdatePatternConstraintsBasedOnPiecesRecursive(newPatternConstraints, newPieces);
+			}
+			return this with
+			{
+				PatternConstraints = newPatternConstraints,
+				Pieces = newPieces
+			};
+		}
+
 	}
 
 	public static class SquareConstraintExtensions
 	{
 		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 24).ToImmutableHashSet();
-
+		public static ImmutableHashSet<int> NotEdgePatterns = AllPatterns.Remove(23);
 
 		public static bool IsEquiavelentTo(
 			this SquareConstraint c1,
@@ -387,6 +414,67 @@ namespace Eternity
 			}
 		}
 
+		public static class Transforms
+		{
+			public static SquareConstraint.TransformAction SetPlacement(Placement p) =>
+				(patterns, pieces) => (patterns, new[] { p.PieceIndex }.ToImmutableHashSet());
+
+			public static SquareConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
+				(patterns, pieces) => (patterns, pieces.Remove(pieceIndex));
+
+			public static SquareConstraint.TransformAction ModifyPatterns(Func<MultiPatternConstraints, MultiPatternConstraints> f) =>
+				(patterns, pieces) => (f(patterns), pieces);
+
+			public static SquareConstraint.TransformAction SetLeftPattern(int pattern) =>
+				ModifyPatterns(
+					p => p with { Left = new[] { pattern }.ToImmutableHashSet() }
+				);
+
+			public static SquareConstraint.TransformAction SetTopPattern(int pattern) =>
+				ModifyPatterns(
+					p => p with { Top = new[] { pattern }.ToImmutableHashSet() }
+				);
+
+			public static SquareConstraint.TransformAction SetRightPattern(int pattern) =>
+				ModifyPatterns(
+					p => p with { Right = new[] { pattern }.ToImmutableHashSet() }
+				);
+
+			public static SquareConstraint.TransformAction SetBottomPattern(int pattern) =>
+				ModifyPatterns(
+					p => p with { Bottom = new[] { pattern }.ToImmutableHashSet() }
+				);
+
+			public static SquareConstraint.TransformAction ConstrainRightPattern(
+				ImmutableHashSet<int> patterns
+			) =>
+				ModifyPatterns(
+					p => p with { Right = p.Right.Constrain(patterns) }
+				);
+
+			public static SquareConstraint.TransformAction ConstrainTopPattern(
+				ImmutableHashSet<int> patterns
+			) =>
+				ModifyPatterns(
+					p => p with { Top = p.Top.Constrain(patterns) }
+				);
+
+
+			public static SquareConstraint.TransformAction ConstrainBottomPattern(
+				ImmutableHashSet<int> patterns
+			) =>
+				ModifyPatterns(
+					p => p with { Bottom = p.Bottom.Constrain(patterns) }
+				);
+
+			public static SquareConstraint.TransformAction ConstrainLeftPattern(
+				ImmutableHashSet<int> patterns
+			) =>
+				ModifyPatterns(
+					p => p with { Left = p.Left.Constrain(patterns) }
+				);
+		}
+
 		private static ImmutableArray<SquareConstraint>? ProcessQueue(
 			ImmutableArray<SquareConstraint> constraints,
 			SquareConstraintTransformQueue q,
@@ -402,21 +490,14 @@ namespace Eternity
 				}
 				var (constraintIndex, transforms) = qPopResult;
 				var before = constraints[constraintIndex];
-				var after = before;
-				foreach (var t in transforms)
-				{
-					var afterTest = t(after);
-					if (afterTest.PatternConstraints.Right.Count > after.PatternConstraints.Right.Count)
-					{
-						throw new Exception("Gotcha!");
-					}
-					after = t(after);
-				}
+				var after = before.Transform(transforms);
 				if (!before.IsEquiavelentTo(after))
 				{
 					constraints = constraints.SetItem(constraintIndex, after);
 					if (after.Pieces.Count() == 0)
 					{
+						// The board is in an invalid state.
+						// Abort whatever triggered this.
 						return null;
 					}
 					if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
@@ -428,7 +509,7 @@ namespace Eternity
 							{
 								q.Push(
 									i,
-									c => c.RemovePossiblePiece(thePieceIndex)
+									Transforms.RemovePossiblePiece(thePieceIndex)
 								);
 							}
 						}
@@ -445,7 +526,7 @@ namespace Eternity
 							var left = after.PatternConstraints.Left;
 							q.Push(
 								adjPositionIndex.Value,
-								c => c.ConstrainRightPattern(left)
+								Transforms.ConstrainRightPattern(left)
 							);
 						}
 					}
@@ -461,7 +542,7 @@ namespace Eternity
 							var top = after.PatternConstraints.Top;
 							q.Push(
 								adjPositionIndex.Value,
-								c => c.ConstrainBottomPattern(top)
+								Transforms.ConstrainBottomPattern(top)
 							);
 						}
 					}
@@ -477,7 +558,7 @@ namespace Eternity
 							var right = after.PatternConstraints.Right;
 							q.Push(
 								adjPositionIndex.Value,
-								c => c.ConstrainLeftPattern(right)
+								Transforms.ConstrainLeftPattern(right)
 							);
 						}
 					}
@@ -493,7 +574,7 @@ namespace Eternity
 							var bottom = after.PatternConstraints.Bottom;
 							q.Push(
 								adjPositionIndex.Value,
-								c => c.ConstrainTopPattern(bottom)
+								Transforms.ConstrainTopPattern(bottom)
 							);
 						}
 					}
@@ -501,6 +582,7 @@ namespace Eternity
 			}
 			return constraints;
 		}
+
 
 		public static ImmutableArray<SquareConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
@@ -528,23 +610,40 @@ namespace Eternity
 				var position = positioner.PositionLookup[placementIndex];
 				if (position.X == 0)
 				{
-					q.Push(placementIndex, c => c.SetLeftPattern(23));
+					q.Push(placementIndex, Transforms.SetLeftPattern(23));
+				}
+				else
+				{
+					q.Push(placementIndex, Transforms.ConstrainLeftPattern(NotEdgePatterns));
 				}
 				if (position.Y == 0)
 				{
-					q.Push(placementIndex, c => c.SetTopPattern(23));
+					q.Push(placementIndex, Transforms.SetTopPattern(23));
+				}
+				else
+				{
+					q.Push(placementIndex, Transforms.ConstrainTopPattern(NotEdgePatterns));
 				}
 				if (position.X == sideLength-1)
 				{
-					q.Push(placementIndex, c => c.SetRightPattern(23));
+					q.Push(placementIndex, Transforms.SetRightPattern(23));
+				}
+				else
+				{
+					q.Push(placementIndex, Transforms.ConstrainRightPattern(NotEdgePatterns));
 				}
 				if (position.Y == sideLength-1)
 				{
-					q.Push(placementIndex, c => c.SetBottomPattern(23));
+					q.Push(placementIndex, Transforms.SetBottomPattern(23));
+				}
+				else
+				{
+					q.Push(placementIndex, Transforms.ConstrainBottomPattern(NotEdgePatterns));
 				}
 			}
 			return ProcessQueue(constraints, q, positioner);
 		}
+
 
 		public static ImmutableArray<SquareConstraint>? SetPlacement(
 			this ImmutableArray<SquareConstraint> constraints,
@@ -558,11 +657,11 @@ namespace Eternity
 			{
 				if (i == positionIndex)
 				{
-					q.Push(i, c => c.SetPlacement(placement));
+					q.Push(i, Transforms.SetPlacement(placement));
 				}
 				else
 				{
-					q.Push(i, c => c.RemovePossiblePiece(placement.PieceIndex));
+					q.Push(i, Transforms.RemovePossiblePiece(placement.PieceIndex));
 				}
 			}
 			return ProcessQueue(constraints, q, positioner);

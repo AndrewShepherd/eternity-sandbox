@@ -2,22 +2,20 @@
 {
 	internal class SquareConstraintTransformQueue
 	{
-		public delegate SquareConstraint Transform(SquareConstraint before);
-
-		private readonly List<Transform>[] _transforms = Enumerable.Range(0, 256)
+		private readonly List<SquareConstraint.TransformAction>[] _transforms = Enumerable.Range(0, 256)
 			.Select(
-				n => new List<Transform>()
+				n => new List<SquareConstraint.TransformAction>()
 			).ToArray();
 
 		private readonly Queue<int> _toProcess = new();
 
-		public void Push(int constraintIndex, Transform transform)
+		public void Push(int constraintIndex, SquareConstraint.TransformAction transform)
 		{
 			_transforms[constraintIndex].Add(transform);
 			_toProcess.Enqueue(constraintIndex);
 		}
 
-		public Tuple<int, List<Transform>>? Pop()
+		public Tuple<int, List<SquareConstraint.TransformAction>>? Pop()
 		{
 			while(_toProcess.TryDequeue(out int constraintIndex))
 			{
@@ -28,7 +26,7 @@
 						_transforms[constraintIndex]
 					) = (
 						_transforms[constraintIndex],
-						new List<Transform>()
+						new List<SquareConstraint.TransformAction>()
 					);
 					return Tuple.Create(constraintIndex, rv);
 				}

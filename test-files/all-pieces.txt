@@ -57,3 +57,11 @@ xabx,xaca,xada,xaea,xafa,xbga,xhdb,xxbh,bebx,ciee,diji,egji,fjkg,gilj,dgei,bxmg,
 xabx,xaca,xbda,xbeb,xadb,xfga,xbhf,xxib,bjax,cckj,ddcc,elhd,dcml,gdhc,hkld,ixbk,agbx,kdlg,cekd,hmje,mgmm,hehg,lmce,bxfm,bkax,ledk,kcge,jgkc,mjjg,hhdj,cejh,fxie,amix,dgem,ggjg,klmg,jmel,dljm,jjel,ixfj,icbx,ejmc,jkjj,mlhk,ejgl,jemj,egde,fxfg,bcix,mehc,jmke,hgkm,ghlg,mglh,dmeg,fxam,ifxx,hfxf,kixf,kbxi,laxb,laxa,eixa,axxi
 xabx,xbca,xbdb,xaeb,xfga,xfef,xhif,xxbh,bjhx,cdjj,dkjd,egek,gkig,eklk,iegk,bxfe,hlbx,jdcl,jcjd,emic,iiim,liji,ggmi,fxfg,bcfx,cikc,jjmi,ijdj,imej,jmdm,mkem,fxhk,fehx,kkge,mllk,dgil,ekmg,djck,elcj,hxbl,hcax,gjec,ljij,imkj,mijm,ckci,cldk,bxfl,akfx,eekk,idge,keed,jlle,cgil,dmdg,fxam,fbxx,kaxb,gaxa,efxa,lhxf,ihxh,dbxh,axxb
 xabx,xcda,xaec,xcfa,xagc,xbha,xijb,xxbi,bfax,dkef,eehk,fkde,glhk,hgml,jedg,bxce,afix,ejgf,hdkj,dgkd,hkmg,mmlk,dlkm,cxbl,ihix,gghh,kedg,kjhe,mllj,ldel,kfgd,bxaf,ifax,hjkf,dhmj,hgjh,lflg,ellf,glkl,axil,akbx,kdek,mkkd,jhgk,ljgh,lhmj,kleh,ixcl,bgcx,elmg,kjhl,gjfj,gmfj,mgdm,ehmg,cxah,cixx,maxi,hixa,fbxi,fbxb,dbxb,mcxb,axxc
+
+9x9
+
+ggxx,gcxx,dcxx,cexx,mdxh,ncxd,jgxb,pfxb,mdxa,oexh,mbxf,kaxf,pgxe,khxg,paxh,nhxd,ncxa,ofxa,nbxc,pdxb,kexf,nexe,kbxe,ifxc,jhxg,iaxf,paxb,pgxd,lbxe,jhxa,odxc,nfxh,mool,iojo,jkmm,lmpn,jmln,lilj,onoj,oiko,kjpl,mlop,mikj,lmok,ijjk,kopl,piik,injp,ilnp,nill,jmmm,klii,njlk,ipnn,nikm,pjom,pjnp,njmo,jijj,mlio,mkik,lomo,jllm,nimn,kplm,nimo,plpm,knmk,jkpj,mnpi,npjn,mkkp,inlk,okio,knpl,ipll,ljjo,ioip,opin,lojk,look
+
+10x10
+
+adxx,baxx,bdxx,acxx,oaxd,ibxc,ndxb,kbxa,hbxc,ebxd,mbxc,qcxa,haxd,gbxb,mdxd,paxd,paxc,lcxb,icxc,ebxa,pcxc,ocxc,fdxc,hcxb,jbxa,mbxb,idxc,maxb,fbxc,gcxa,ncxa,jcxa,raxd,oaxb,qaxb,kaxa,qfik,rjnr,gppi,gqlm,hehk,mjrr,ngkq,rffg,jppi,rheo,nqfo,lhjn,ghrq,jnpm,jeji,ihpg,ffqh,kklf,mfgp,llnm,jmkm,jpee,nljr,oelr,rnio,iiig,gqlh,eqmq,joep,ppro,lhqr,nohk,onhq,injg,jirl,emli,qoem,ioqg,pqpg,grom,rnkp,fphj,fkfr,kjef,nlnq,kmef,nepq,eqlj,ohmp,lrjk,flrr,mekg,oohg,kfie,eqmr,lhll,nkoq,kigf,ifko,ighp,ongr,eknl,jhqp,mofo
