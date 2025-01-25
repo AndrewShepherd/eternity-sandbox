@@ -137,16 +137,22 @@ namespace Eternity.WpfApp
 			return result;
 		}
 
-		private void GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
+		private double CalculateSquareSideLength(CanvasItemGenerationParameters canvasItemGenerationParameters)
 		{
-			var triangleImages = _triangles ?? LoadTriangles().ToImmutableArray();
 			var boardSideLength = Math.Min(
 				canvasItemGenerationParameters.CanvasSize.Width,
 				canvasItemGenerationParameters.CanvasSize.Height
 			);
 			var boardSquares = canvasItemGenerationParameters.Placements.Values.Count;
 			var squaresPerSide = Math.Sqrt(boardSquares);
-			var squareSideLength = boardSideLength / squaresPerSide;
+			return boardSideLength / squaresPerSide;
+		}
+
+		private void GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
+		{
+			var triangleImages = _triangles ?? LoadTriangles().ToImmutableArray();
+
+			var squareSideLength = CalculateSquareSideLength(canvasItemGenerationParameters);
 			var canvasItems = GenerateCanvasItems(
 				squareSideLength,
 				squareSideLength,
@@ -260,7 +266,42 @@ namespace Eternity.WpfApp
 				{
 					_canvasSize = value;
 					UpdateCanvasItems();
+					_propChangedNotifier.PropertyChanged(nameof(BoardSize));
+					_propChangedNotifier.PropertyChanged(nameof(SquareSize));
 				}
+			}
+		}
+
+		public Size _boardSize;
+		public Size BoardSize
+		{
+			get
+			{
+				var minValue = Math.Min(_canvasSize.Width, _canvasSize.Height);
+				return new Size(minValue, minValue);
+			}
+		}
+
+		public Rect SquareSize
+		{
+			get
+			{
+				if (this.Placements != null)
+				{
+					var parameters = new CanvasItemGenerationParameters(
+						this.Placements,
+						this.CanvasSize,
+						this.SelectedSequenceIndex
+					);
+					var squareSize = CalculateSquareSideLength(parameters);
+					return new Rect(0, 0, squareSize, squareSize);
+				}
+				else
+				{
+					var canvasSize = this.CanvasSize;
+					return new Rect(0, 0, canvasSize.Width, canvasSize.Height);
+				}
+
 			}
 		}
 	}

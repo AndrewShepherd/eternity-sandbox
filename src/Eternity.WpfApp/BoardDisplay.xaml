@@ -10,13 +10,18 @@
 	<UserControl.Resources>
     	<local:BoardDisplayViewModel x:Key="BoardDisplayViewModel" />
 	</UserControl.Resources>
+	<Grid DataContext="{StaticResource BoardDisplayViewModel}">
 	<ItemsControl 
-		DataContext="{StaticResource BoardDisplayViewModel}"	
+			
 		ItemsSource="{Binding CanvasItems}" 
 	>
 		<ItemsControl.ItemsPanel>
 			<ItemsPanelTemplate>
-				<Canvas IsItemsHost="True" />
+				<Canvas IsItemsHost="True">
+					<Canvas.Background>
+						<SolidColorBrush Color="Azure" />
+					</Canvas.Background>
+				</Canvas>
 			</ItemsPanelTemplate>
 		</ItemsControl.ItemsPanel>
 		<ItemsControl.Resources>
@@ -57,5 +62,29 @@
 			</Style>
 		</ItemsControl.ItemContainerStyle>
 	</ItemsControl>
+		<!-- The gridline overlay-->
+		<Canvas Width="{Binding Path='BoardSize.Width'}"
+				Height="{Binding Path='BoardSize.Height'}"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Top"
+		>
+			<Canvas.Background>
+				<VisualBrush 
+							TileMode="Tile"
+							Viewport="{Binding Path=SquareSize}"
+							ViewportUnits="Absolute" 
+							Viewbox="{Binding Path=SquareSize}"
+							ViewboxUnits="Absolute"
+						>
+					<VisualBrush.Visual>
+						<Rectangle Stroke="White" StrokeThickness="1" 
+								   Height="{Binding SquareSize.Height}" 
+								   Width="{Binding SquareSize.Width}"
+								/>
+					</VisualBrush.Visual>
+				</VisualBrush>
 
+			</Canvas.Background>
+		</Canvas>
+	</Grid>
 </UserControl>
