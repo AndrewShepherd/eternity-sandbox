@@ -250,8 +250,13 @@ namespace Eternity.WpfApp
 			{
 				if (_placements != value)
 				{
+					bool countChanged = (_placements?.PieceSides?.Count ?? 0) != (value?.PieceSides?.Count ?? 0);
 					SetProperty(ref _placements, value);
 					UpdateCanvasItems();
+					if (countChanged)
+					{
+						this._propChangedNotifier.PropertyChanged(nameof(SquareSize));
+					}
 				}
 			}
 		}
