@@ -13,7 +13,7 @@ namespace Eternity
 	{
 		public static ImmutableArray<int>[] Parse(string source)
 		{
-			var regex = new Regex(@"\b([a-x]{4})\b");
+			var regex = new Regex(@"\b([A-Z,a-z]{4})\b");
 			var allStrings = regex.Matches(source).Select(m => m.Groups[1].Value).ToArray();
 			return allStrings.Select(
 					(s, i) => PuzzleProvider.ConvertToSides(s).ToImmutableArray()

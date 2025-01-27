@@ -6,10 +6,18 @@ namespace Eternity
 	{
 		const string JsonResource = "Eternity.Resources.pieces.json";
 
+		private static int CharToNumber(char c) =>
+			c switch
+			{
+				>= 'a' and < 'z' => c - 'a',
+				'A' => 22,
+				_ => c - 'B' + 24
+			};
+
 		public static int[] ConvertToSides(string s) =>
 			s.ToCharArray()
 			.Select(
-				c => c - 'a'
+				CharToNumber
 			).ToArray();
 		private static IEnumerable<PuzzlePiece> ExtractPieces(JsonDocument document)
 		{

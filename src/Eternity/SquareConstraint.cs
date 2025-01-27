@@ -387,7 +387,7 @@ namespace Eternity
 
 	public static class SquareConstraintExtensions
 	{
-		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 24).ToImmutableHashSet();
+		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 48).ToImmutableHashSet();
 		public static ImmutableHashSet<int> NotEdgePatterns = AllPatterns.Remove(23);
 
 		public static bool IsEquiavelentTo(

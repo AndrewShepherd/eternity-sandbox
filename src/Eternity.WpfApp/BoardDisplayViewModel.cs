@@ -115,12 +115,11 @@ namespace Eternity.WpfApp
 
 		private static BitmapImage?[] LoadTriangles()
 		{
-			string?[] imageIds = new string?[24];
-			for(int i = 0; i < 24; ++i)
+			string?[] imageIds = new string?[45];
+			for(int i = 0; i < imageIds.Length; ++i)
 			{
 				imageIds[i] = $"triangle_{i:d2}.png";
 			}
-			imageIds[22] = null;
 			BitmapImage?[] result = new BitmapImage?[imageIds.Length];
 			for(int i = 0; i < imageIds.Length; ++i)
 			{
