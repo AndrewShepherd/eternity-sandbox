@@ -481,101 +481,153 @@ namespace Eternity
 			Positioner positioner
 		)
 		{
-			while (true)
+			while (q.HasItems)
 			{
-				var qPopResult = q.Pop();
-				if (qPopResult == null)
+				var newItemsWithTwo = new List<int>();
+				while (q.HasItems)
 				{
-					break;
-				}
-				var (constraintIndex, transforms) = qPopResult;
-				var before = constraints[constraintIndex];
-				var after = before.Transform(transforms);
-				if (!before.IsEquiavelentTo(after))
-				{
-					constraints = constraints.SetItem(constraintIndex, after);
-					if (after.Pieces.Count() == 0)
+					var qPopResult = q.Pop();
+					if (qPopResult == null)
 					{
-						// The board is in an invalid state.
-						// Abort whatever triggered this.
-						return null;
+						break;
 					}
-					if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
+					var (constraintIndex, transforms) = qPopResult;
+					var before = constraints[constraintIndex];
+					var after = before.Transform(transforms);
+					if (!before.IsEquiavelentTo(after))
 					{
-						var thePieceIndex = after.Pieces.First();
-						for (var i = 0; i < constraints.Length; ++i)
+						constraints = constraints.SetItem(constraintIndex, after);
+						if (after.Pieces.Count() == 0)
 						{
-							if (i != constraintIndex)
+							// The board is in an invalid state.
+							// Abort whatever triggered this.
+							return null;
+						}
+						else if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
+						{
+							var thePieceIndex = after.Pieces.First();
+							for (var i = 0; i < constraints.Length; ++i)
 							{
+								if (i != constraintIndex)
+								{
+									q.Push(
+										i,
+										Transforms.RemovePossiblePiece(thePieceIndex)
+									);
+								}
+							}
+						}
+						else if ((after.Pieces.Count() == 2) && (before.Pieces.Count() > 2))
+						{
+							newItemsWithTwo.Add(constraintIndex);
+						}
+						if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
+						{
+							var adjPositionIndex = TransformPositionIndex(
+								positioner,
+								constraintIndex,
+								Positions.Left
+							);
+							if (adjPositionIndex != null)
+							{
+								var left = after.PatternConstraints.Left;
 								q.Push(
-									i,
-									Transforms.RemovePossiblePiece(thePieceIndex)
+									adjPositionIndex.Value,
+									Transforms.ConstrainRightPattern(left)
+								);
+							}
+						}
+						if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
+						{
+							var adjPositionIndex = TransformPositionIndex(
+								positioner,
+								constraintIndex,
+								Positions.Above
+							);
+							if (adjPositionIndex != null)
+							{
+								var top = after.PatternConstraints.Top;
+								q.Push(
+									adjPositionIndex.Value,
+									Transforms.ConstrainBottomPattern(top)
+								);
+							}
+						}
+						if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
+						{
+							var adjPositionIndex = TransformPositionIndex(
+								positioner,
+								constraintIndex,
+								Positions.Right
+							);
+							if (adjPositionIndex != null)
+							{
+								var right = after.PatternConstraints.Right;
+								q.Push(
+									adjPositionIndex.Value,
+									Transforms.ConstrainLeftPattern(right)
+								);
+							}
+						}
+						if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
+						{
+							var adjPositionIndex = TransformPositionIndex(
+								positioner,
+								constraintIndex,
+								Positions.Below
+							);
+							if (adjPositionIndex != null)
+							{
+								var bottom = after.PatternConstraints.Bottom;
+								q.Push(
+									adjPositionIndex.Value,
+									Transforms.ConstrainTopPattern(bottom)
 								);
 							}
 						}
 					}
-					if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
+				}
+				if (newItemsWithTwo.Any())
+				{
+					foreach(var newItemIndex in newItemsWithTwo)
 					{
-						var adjPositionIndex = TransformPositionIndex(
-							positioner,
-							constraintIndex,
-							Positions.Left
-						);
-						if (adjPositionIndex != null)
+						var newItemConstraint = constraints[newItemIndex];
+						if (newItemConstraint.Pieces.Count() != 2)
 						{
-							var left = after.PatternConstraints.Left;
-							q.Push(
-								adjPositionIndex.Value,
-								Transforms.ConstrainRightPattern(left)
-							);
+							continue;
 						}
-					}
-					if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
-					{
-						var adjPositionIndex = TransformPositionIndex(
-							positioner,
-							constraintIndex,
-							Positions.Above
-						);
-						if (adjPositionIndex != null)
+						var matchingIndexes = new List<int>();
+						for(int i = 0; i < constraints.Length; ++i)
 						{
-							var top = after.PatternConstraints.Top;
-							q.Push(
-								adjPositionIndex.Value,
-								Transforms.ConstrainBottomPattern(top)
-							);
+							if (i == newItemIndex)
+							{
+								continue;
+							}
+							var trialConstraint = constraints[i];
+							if (trialConstraint.Pieces.IsEquivalentTo(newItemConstraint.Pieces))
+							{
+								matchingIndexes.Add(i);
+							}
 						}
-					}
-					if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
-					{
-						var adjPositionIndex = TransformPositionIndex(
-							positioner,
-							constraintIndex,
-							Positions.Right
-						);
-						if (adjPositionIndex != null)
+						if (matchingIndexes.Count > 1)
 						{
-							var right = after.PatternConstraints.Right;
-							q.Push(
-								adjPositionIndex.Value,
-								Transforms.ConstrainLeftPattern(right)
-							);
+							return null;
 						}
-					}
-					if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
-					{
-						var adjPositionIndex = TransformPositionIndex(
-							positioner,
-							constraintIndex,
-							Positions.Below
-						);
-						if (adjPositionIndex != null)
+						else if (matchingIndexes.Count == 1)
 						{
-							var bottom = after.PatternConstraints.Bottom;
-							q.Push(
-								adjPositionIndex.Value,
-								Transforms.ConstrainTopPattern(bottom)
-							);
+							for(int i = 0; i < constraints.Length; ++i)
+							{
+								if ((i != newItemIndex) && (i != matchingIndexes[0]))
+								{
+									foreach (var p in newItemConstraint.Pieces)
+									{
+										if (constraints[i].Pieces.Contains(p))
+										{
+											q.Push(i, Transforms.RemovePossiblePiece(p));
+										}
+									}
+								}
+							}
 						}
 					}
 				}
@@ -664,7 +716,14 @@ namespace Eternity
 					q.Push(i, Transforms.RemovePossiblePiece(placement.PieceIndex));
 				}
 			}
-			return ProcessQueue(constraints, q, positioner);
+			var result = ProcessQueue(constraints, q, positioner);
+
+			if (result == null)
+			{
+				return null;
+			}
+			return result;
+
 		}
 	}
 }

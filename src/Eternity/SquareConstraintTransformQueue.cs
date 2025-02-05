@@ -15,6 +15,8 @@
 			_toProcess.Enqueue(constraintIndex);
 		}
 
+		public bool HasItems => _toProcess.Count > 0;
+
 		public Tuple<int, List<SquareConstraint.TransformAction>>? Pop()
 		{
 			while(_toProcess.TryDequeue(out int constraintIndex))

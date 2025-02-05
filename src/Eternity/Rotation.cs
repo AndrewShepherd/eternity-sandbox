@@ -1,7 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics.Tracing;
-
-namespace Eternity
+﻿namespace Eternity
 {
 	public enum Rotation
 	{
