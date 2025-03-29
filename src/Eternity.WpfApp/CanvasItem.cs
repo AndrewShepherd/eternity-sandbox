@@ -91,7 +91,7 @@ namespace Eternity.WpfApp
 		internal static IEnumerable<CanvasConstraintItem> GenerateCanvasConstraintNumber(
 			double squareWidth,
 			double squareHeight,
-			IReadOnlyList<SquareConstraint> constraints,
+			IReadOnlyList<SlotConstraint> constraints,
 			Positioner positioner)
 		{
 			for(int i = 0; i < constraints.Count; ++i)

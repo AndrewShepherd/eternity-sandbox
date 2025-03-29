@@ -15,9 +15,9 @@
 		private ImmutableArray<Placement?> _placements = [];
 		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
 
-		private ImmutableArray<SquareConstraint> _constraints;
+		private ImmutableArray<SlotConstraint> _constraints;
 
-		public IReadOnlyList<SquareConstraint> Constraints => _constraints;
+		public IReadOnlyList<SlotConstraint> Constraints => _constraints;
 
 		public Placements? SetItem(int positionIndex, Placement placement)
 		{
@@ -55,7 +55,7 @@
 					PieceSides = this.PieceSides,
 					_placements = _placements.SetItem(positionIndex, placement),
 					_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
-					_constraints = (ImmutableArray<SquareConstraint>)newConstraints!
+					_constraints = (ImmutableArray<SlotConstraint>)newConstraints!
 				};
 			}
 		}
@@ -73,7 +73,7 @@
 
 		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			ImmutableArray<SquareConstraint>? initialConstraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides);
+			ImmutableArray<SlotConstraint>? initialConstraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides);
 			if (initialConstraints == null)
 			{
 				throw new Exception("Unable to generate the initial constraints");
@@ -85,7 +85,7 @@
 					Positioner = Positioner.Generate(pieceSides.Count),
 					_placements = new Placement?[pieceSides.Count].ToImmutableArray(),
 					PieceSides = pieceSides,
-					_constraints = (ImmutableArray<SquareConstraint>) initialConstraints
+					_constraints = (ImmutableArray<SlotConstraint>) initialConstraints
 				};
 			}
 		}

@@ -67,7 +67,7 @@ namespace Eternity
 			};
 	}
 
-	public record class SquareConstraint
+	public record class SlotConstraint
 	{
 		public required ImmutableHashSet<int> Pieces { get; init; }
 
@@ -80,18 +80,18 @@ namespace Eternity
 		};
 
 		public required IReadOnlyList<ImmutableArray<int>> PiecePatternLookup { get; init; }
-		public SquareConstraint()
+		public SlotConstraint()
 		{
 		}
 
-		public readonly static SquareConstraint Never = new()
+		public readonly static SlotConstraint Never = new()
 		{
 			PiecePatternLookup = ImmutableArray<ImmutableArray<int>>.Empty,
 			PatternConstraints = MultiPatternConstraints.Never,
 			Pieces = ImmutableHashSet<int>.Empty
 		};
 
-		public SquareConstraint SetPlacement(
+		public SlotConstraint SetPlacement(
 			Placement placement
 		)
 		{
@@ -250,7 +250,7 @@ namespace Eternity
 			}
 		}
 
-		private SquareConstraint ModifyPatternConstraints(
+		private SlotConstraint ModifyPatternConstraints(
 			Func<MultiPatternConstraints, MultiPatternConstraints> transform
 		)
 		{
@@ -270,7 +270,7 @@ namespace Eternity
 			};
 		}
 
-		public SquareConstraint RemovePossiblePiece(
+		public SlotConstraint RemovePossiblePiece(
 			int pieceIndex
 		)
 		{
@@ -293,19 +293,19 @@ namespace Eternity
 			}
 		}
 
-		public SquareConstraint SetTopPattern(
+		public SlotConstraint SetTopPattern(
 			int pattern
 		) => ModifyPatternConstraints(
 			mp => mp with { Top = new[] { pattern }.ToImmutableHashSet() }
 		);
 
-		public SquareConstraint SetLeftPattern(
+		public SlotConstraint SetLeftPattern(
 			int pattern
 		) => ModifyPatternConstraints(
 			mp => mp with { Left = new[] { pattern }.ToImmutableHashSet() }
 		);
 
-		public SquareConstraint ConstrainLeftPattern(
+		public SlotConstraint ConstrainLeftPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
 			mp =>
@@ -315,7 +315,7 @@ namespace Eternity
 				}
 		);
 
-		public SquareConstraint ConstrainTopPattern(
+		public SlotConstraint ConstrainTopPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
 			mp =>
@@ -325,7 +325,7 @@ namespace Eternity
 				}
 		);
 
-		public SquareConstraint ConstrainBottomPattern(
+		public SlotConstraint ConstrainBottomPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
 			mp =>
@@ -335,7 +335,7 @@ namespace Eternity
 				}
 		);
 
-		public SquareConstraint ConstrainRightPattern(
+		public SlotConstraint ConstrainRightPattern(
 			ImmutableHashSet<int> patterns
 		) => ModifyPatternConstraints(
 			mp =>
@@ -345,13 +345,13 @@ namespace Eternity
 				}
 		);
 
-		public SquareConstraint SetRightPattern(
+		public SlotConstraint SetRightPattern(
 			int pattern
 		) => ModifyPatternConstraints(
 			mp => mp with { Right = new[] { pattern }.ToImmutableHashSet() }
 		);
 
-		public SquareConstraint SetBottomPattern(
+		public SlotConstraint SetBottomPattern(
 			int pattern
 		) => ModifyPatternConstraints(
 			mp => mp with { Bottom = new[] { pattern }.ToImmutableHashSet() }
@@ -360,7 +360,7 @@ namespace Eternity
 
 		public delegate (MultiPatternConstraints, ImmutableHashSet<int>) TransformAction(MultiPatternConstraints mpc, ImmutableHashSet<int> pieces);
 
-		public SquareConstraint Transform(IEnumerable<TransformAction> actions)
+		public SlotConstraint Transform(IEnumerable<TransformAction> actions)
 		{
 			var newPatternConstraints = this.PatternConstraints;
 			var newPieces = this.Pieces;
@@ -391,8 +391,8 @@ namespace Eternity
 		public static ImmutableHashSet<int> NotEdgePatterns = AllPatterns.Remove(23);
 
 		public static bool IsEquiavelentTo(
-			this SquareConstraint c1,
-			SquareConstraint c2
+			this SlotConstraint c1,
+			SlotConstraint c2
 		) =>
 			ReferenceEquals(c1, c2)
 			|| (
@@ -416,43 +416,43 @@ namespace Eternity
 
 		public static class Transforms
 		{
-			public static SquareConstraint.TransformAction SetPlacement(Placement p) =>
+			public static SlotConstraint.TransformAction SetPlacement(Placement p) =>
 				(patterns, pieces) => (patterns, new[] { p.PieceIndex }.ToImmutableHashSet());
 
-			public static SquareConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
+			public static SlotConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
 				(patterns, pieces) => (patterns, pieces.Remove(pieceIndex));
 
-			public static SquareConstraint.TransformAction ModifyPatterns(Func<MultiPatternConstraints, MultiPatternConstraints> f) =>
+			public static SlotConstraint.TransformAction ModifyPatterns(Func<MultiPatternConstraints, MultiPatternConstraints> f) =>
 				(patterns, pieces) => (f(patterns), pieces);
 
-			public static SquareConstraint.TransformAction SetLeftPattern(int pattern) =>
+			public static SlotConstraint.TransformAction SetLeftPattern(int pattern) =>
 				ModifyPatterns(
 					p => p with { Left = new[] { pattern }.ToImmutableHashSet() }
 				);
 
-			public static SquareConstraint.TransformAction SetTopPattern(int pattern) =>
+			public static SlotConstraint.TransformAction SetTopPattern(int pattern) =>
 				ModifyPatterns(
 					p => p with { Top = new[] { pattern }.ToImmutableHashSet() }
 				);
 
-			public static SquareConstraint.TransformAction SetRightPattern(int pattern) =>
+			public static SlotConstraint.TransformAction SetRightPattern(int pattern) =>
 				ModifyPatterns(
 					p => p with { Right = new[] { pattern }.ToImmutableHashSet() }
 				);
 
-			public static SquareConstraint.TransformAction SetBottomPattern(int pattern) =>
+			public static SlotConstraint.TransformAction SetBottomPattern(int pattern) =>
 				ModifyPatterns(
 					p => p with { Bottom = new[] { pattern }.ToImmutableHashSet() }
 				);
 
-			public static SquareConstraint.TransformAction ConstrainRightPattern(
+			public static SlotConstraint.TransformAction ConstrainRightPattern(
 				ImmutableHashSet<int> patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Right = p.Right.Constrain(patterns) }
 				);
 
-			public static SquareConstraint.TransformAction ConstrainTopPattern(
+			public static SlotConstraint.TransformAction ConstrainTopPattern(
 				ImmutableHashSet<int> patterns
 			) =>
 				ModifyPatterns(
@@ -460,14 +460,14 @@ namespace Eternity
 				);
 
 
-			public static SquareConstraint.TransformAction ConstrainBottomPattern(
+			public static SlotConstraint.TransformAction ConstrainBottomPattern(
 				ImmutableHashSet<int> patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Bottom = p.Bottom.Constrain(patterns) }
 				);
 
-			public static SquareConstraint.TransformAction ConstrainLeftPattern(
+			public static SlotConstraint.TransformAction ConstrainLeftPattern(
 				ImmutableHashSet<int> patterns
 			) =>
 				ModifyPatterns(
@@ -475,9 +475,9 @@ namespace Eternity
 				);
 		}
 
-		private static ImmutableArray<SquareConstraint>? ProcessQueue(
-			ImmutableArray<SquareConstraint> constraints,
-			SquareConstraintTransformQueue q,
+		private static ImmutableArray<SlotConstraint>? ProcessQueue(
+			ImmutableArray<SlotConstraint> constraints,
+			SlotConstraintTransformQueue q,
 			Positioner positioner
 		)
 		{
@@ -636,14 +636,14 @@ namespace Eternity
 		}
 
 
-		public static ImmutableArray<SquareConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
+		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			var constraintsArray = new SquareConstraint[pieceSides.Count];
+			var constraintsArray = new SlotConstraint[pieceSides.Count];
 
 			ImmutableHashSet<int> AllPieces = Enumerable.Range(0, pieceSides.Count)
 				.ToImmutableHashSet();
 
-			var initialConstraint = new SquareConstraint
+			var initialConstraint = new SlotConstraint
 			{
 				Pieces = AllPieces,
 				PiecePatternLookup = pieceSides
@@ -655,7 +655,7 @@ namespace Eternity
 			var positioner = Positioner.Generate(pieceSides.Count);
 
 			var constraints = constraintsArray.ToImmutableArray();
-			var q = new SquareConstraintTransformQueue();
+			var q = new SlotConstraintTransformQueue();
 			int sideLength = (int)(Math.Round(Math.Sqrt(pieceSides.Count)));
 			for (int placementIndex = 0; placementIndex < pieceSides.Count; ++placementIndex)
 			{
@@ -697,14 +697,14 @@ namespace Eternity
 		}
 
 
-		public static ImmutableArray<SquareConstraint>? SetPlacement(
-			this ImmutableArray<SquareConstraint> constraints,
+		public static ImmutableArray<SlotConstraint>? SetPlacement(
+			this ImmutableArray<SlotConstraint> constraints,
 			int positionIndex,
 			Placement placement,
 			Positioner positioner
 			)
 		{
-			var q = new SquareConstraintTransformQueue();
+			var q = new SlotConstraintTransformQueue();
 			for (int i = 0; i < constraints.Length; ++i)
 			{
 				if (i == positionIndex)

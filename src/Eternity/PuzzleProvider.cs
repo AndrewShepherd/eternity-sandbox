@@ -19,19 +19,19 @@ namespace Eternity
 			.Select(
 				CharToNumber
 			).ToArray();
-		private static IEnumerable<PuzzlePiece> ExtractPieces(JsonDocument document)
+		private static IEnumerable<Tile> ExtractPieces(JsonDocument document)
 		{
 			var rootElement = document.RootElement;
 			foreach(var element in rootElement.EnumerateArray())
 			{
 				var codeProperty = element.GetProperty("code");
-				yield return new PuzzlePiece(
+				yield return new Tile(
 					element.GetProperty("index").GetInt32(),
 					ConvertToSides(codeProperty.GetString()!)
 				);
 			}
 		}
-		public static async Task<PuzzlePiece[]> LoadPieces()
+		public static async Task<Tile[]> LoadPieces()
 		{
 			var assembly = System.Reflection.Assembly.GetExecutingAssembly();
 

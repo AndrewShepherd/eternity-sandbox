@@ -1,6 +1,6 @@
 ﻿namespace Eternity
 {
-	public class PuzzlePiece(
+	public class Tile(
 		int index,
 		int[] sides
 	)
