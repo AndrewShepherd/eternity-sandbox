@@ -476,7 +476,7 @@ namespace Eternity
 		private static ImmutableArray<SlotConstraint>? ProcessQueue(
 			ImmutableArray<SlotConstraint> constraints,
 			SlotConstraintTransformQueue q,
-			Positioner positioner
+			Dimensions dimensions
 		)
 		{
 			while (q.HasItems)
@@ -490,7 +490,7 @@ namespace Eternity
 						break;
 					}
 					var (position, transforms) = qPopResult;
-					var constraintIndex = positioner.ReversePositionLookup[position];
+					var constraintIndex = dimensions.PositionToIndex(position);
 					var before = constraints[constraintIndex];
 					var after = before.Transform(transforms);
 					if (!before.IsEquiavelentTo(after))
@@ -510,7 +510,7 @@ namespace Eternity
 								if (i != constraintIndex)
 								{
 									q.Push(
-										positioner.PositionLookup[i],
+										dimensions.IndexToPosition(i),
 										Transforms.RemovePossiblePiece(thePieceIndex)
 									);
 								}
@@ -523,7 +523,7 @@ namespace Eternity
 						if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
 						{
 							var adjPosition = TryTransformPosition(
-								positioner.Dimensions,
+								dimensions,
 								position,
 								Positions.Left
 							);
@@ -539,7 +539,7 @@ namespace Eternity
 						if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
 						{
 							var adjPosition = TryTransformPosition(
-								positioner.Dimensions,
+								dimensions,
 								position,
 								Positions.Above
 							);
@@ -555,7 +555,7 @@ namespace Eternity
 						if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
 						{
 							var adjPosition = TryTransformPosition(
-								positioner.Dimensions,
+								dimensions,
 								position,
 								Positions.Right
 							);
@@ -571,7 +571,7 @@ namespace Eternity
 						if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
 						{
 							var adjPosition = TryTransformPosition(
-								positioner.Dimensions,
+								dimensions,
 								position,
 								Positions.Below
 							);
@@ -623,7 +623,7 @@ namespace Eternity
 										if (constraints[i].Pieces.Contains(p))
 										{
 											q.Push(
-												positioner.PositionLookup[i],
+												dimensions.IndexToPosition(i),
 												Transforms.RemovePossiblePiece(p)
 											);
 										}
@@ -654,14 +654,15 @@ namespace Eternity
 			{
 				constraintsArray[placementIndex] = initialConstraint;
 			}
-			var positioner = Positioner.Generate(pieceSides.Count);
+			var squareRoot = (int)Math.Round(Math.Sqrt(pieceSides.Count));
+			var dimensions = new Dimensions(squareRoot, squareRoot);
 
 			var constraints = constraintsArray.ToImmutableArray();
 			var q = new SlotConstraintTransformQueue();
 			int sideLength = (int)(Math.Round(Math.Sqrt(pieceSides.Count)));
 			for (int placementIndex = 0; placementIndex < pieceSides.Count; ++placementIndex)
 			{
-				var position = positioner.PositionLookup[placementIndex];
+				var position = dimensions.IndexToPosition(placementIndex);
 				if (position.X == 0)
 				{
 					q.Push(position, 
@@ -697,30 +698,37 @@ namespace Eternity
 					q.Push(position, Transforms.ConstrainBottomPattern(NotEdgePatterns));
 				}
 			}
-			return ProcessQueue(constraints, q, positioner);
+			return ProcessQueue(constraints, q, dimensions);
 		}
 
 
 		public static ImmutableArray<SlotConstraint>? SetPlacement(
 			this ImmutableArray<SlotConstraint> constraints,
-			int positionIndex,
+			Position position,
 			Placement placement,
-			Positioner positioner
+			Dimensions dimensions
 			)
 		{
 			var q = new SlotConstraintTransformQueue();
+			int positionIndex = dimensions.PositionToIndex(position);
 			for (int i = 0; i < constraints.Length; ++i)
 			{
 				if (i == positionIndex)
 				{
-					q.Push(positioner.PositionLookup[i], Transforms.SetPlacement(placement));
+					q.Push(
+						dimensions.IndexToPosition(i),
+						Transforms.SetPlacement(placement)
+					);
 				}
 				else
 				{
-					q.Push(positioner.PositionLookup[i], Transforms.RemovePossiblePiece(placement.PieceIndex));
+					q.Push(
+						dimensions.IndexToPosition(i),
+						Transforms.RemovePossiblePiece(placement.PieceIndex)
+					);
 				}
 			}
-			var result = ProcessQueue(constraints, q, positioner);
+			var result = ProcessQueue(constraints, q, dimensions);
 
 			if (result == null)
 			{

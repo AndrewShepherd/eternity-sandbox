@@ -15,9 +15,9 @@
 		private ImmutableArray<Placement?> _placements = [];
 		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
 
-		private ImmutableArray<SlotConstraint> _constraints;
+		private Constraints _constraints;
 
-		public IReadOnlyList<SlotConstraint> Constraints => _constraints;
+		public Constraints Constraints => _constraints;
 
 		public Placements? SetItem(int positionIndex, Placement placement)
 		{
@@ -38,32 +38,31 @@
 				}
 			}
 
-			var newConstraints = _constraints.SetPlacement(
-				positionIndex, 
-				placement, 
-				this.Positioner
-			);
-			if (newConstraints == null)
+			return _constraints.SetPlacement(
+				this.Positioner.PositionLookup[positionIndex], 
+				placement
+			) switch
 			{
-				return null;
-			}
-			else
-			{
-				return new Placements
-				{
-					Positioner = this.Positioner,
-					PieceSides = this.PieceSides,
-					_placements = _placements.SetItem(positionIndex, placement),
-					_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
-					_constraints = (ImmutableArray<SlotConstraint>)newConstraints!
-				};
-			}
+				Constraints c =>
+					new Placements
+					{
+						Positioner = this.Positioner,
+						Dimensions = this.Dimensions,
+						PieceSides = this.PieceSides,
+						_placements = _placements.SetItem(positionIndex, placement),
+						_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
+						_constraints = c
+					},
+				_ => null
+			};
 		}
 
 		public IReadOnlyList<Placement?> Values => _placements;
 
 		public required IReadOnlyList<ImmutableArray<int>> PieceSides { get; init; }
 		public required Positioner Positioner { get; init; }
+
+		public required Dimensions Dimensions { get; init; }
 
 		public bool ContainsPieceIndex(int pieceIndex) => _usedPieceIndexes[pieceIndex];
 
@@ -73,19 +72,22 @@
 
 		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			ImmutableArray<SlotConstraint>? initialConstraints = SquareConstraintExtensions.GenerateInitialPlacements(pieceSides);
+			Constraints? initialConstraints = Constraints.Generate(pieceSides);
+
 			if (initialConstraints == null)
 			{
 				throw new Exception("Unable to generate the initial constraints");
 			}
 			else
 			{
+				var sqrt = (int)Math.Round(Math.Sqrt(pieceSides.Count));
 				return new Placements
 				{
 					Positioner = Positioner.Generate(pieceSides.Count),
+					Dimensions = new Dimensions(sqrt, sqrt),
 					_placements = new Placement?[pieceSides.Count].ToImmutableArray(),
 					PieceSides = pieceSides,
-					_constraints = (ImmutableArray<SlotConstraint>) initialConstraints
+					_constraints = initialConstraints
 				};
 			}
 		}

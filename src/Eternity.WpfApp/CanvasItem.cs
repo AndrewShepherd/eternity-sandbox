@@ -91,23 +91,25 @@ namespace Eternity.WpfApp
 		internal static IEnumerable<CanvasConstraintItem> GenerateCanvasConstraintNumber(
 			double squareWidth,
 			double squareHeight,
-			IReadOnlyList<SlotConstraint> constraints,
+			Constraints constraints,
 			Positioner positioner)
 		{
-			for(int i = 0; i < constraints.Count; ++i)
+
+			for(int i = 0; i < positioner.PositionLookup.Count; ++i)
 			{
-				if (constraints[i].Pieces.Count == 1)
+				var position = positioner.PositionLookup[i];
+				var constraint = constraints.At(position);
+				if (constraint.Pieces.Count == 1)
 				{
 					continue;
 				}
-				var position = positioner.PositionLookup[i];
 				yield return new CanvasConstraintItem
 				{
 					Left = position.X * squareWidth,
 					Top = position.Y * squareHeight,
 					Width = squareWidth,
 					Height = squareHeight,
-					Count = constraints[i].Pieces.Count
+					Count = constraint.Pieces.Count
 				};
 			}
 		}
@@ -149,9 +151,10 @@ namespace Eternity.WpfApp
 					Rotation = rotation
 				};
 			}
-			for(int placementIndex = 0; placementIndex < placements.Constraints.Count; ++placementIndex)
+			for(int placementIndex = 0; placementIndex < placements.Positioner.PositionLookup.Count; ++placementIndex)
 			{
-				var patternConstraints = placements.Constraints[placementIndex].PatternConstraints;
+				var position = placements.Positioner.PositionLookup[placementIndex];
+				var patternConstraints = placements.Constraints.At(position).PatternConstraints;
 				var boogles = new[]
 				{
 					(patternConstraints.Top, 0),

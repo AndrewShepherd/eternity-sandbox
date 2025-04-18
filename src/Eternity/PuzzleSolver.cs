@@ -1,6 +1,7 @@
 ﻿namespace Eternity
 {
 	using System.Collections.Immutable;
+	using System.Runtime.CompilerServices;
 
 	public static class PuzzleSolver
 	{
@@ -107,12 +108,12 @@
 		];
 
 		private static List<Rotation> GetPossibleRotations(
-			int positionIndex,
+			Position position,
 			int pieceIndex,
 			Placements listPlacements
 		)
 		{
-			var pc = listPlacements.Constraints[positionIndex].PatternConstraints;
+			var pc = listPlacements.Constraints.At(position).PatternConstraints;
 			var patterns = listPlacements.PieceSides[pieceIndex];
 			List<Rotation> result = new List<Rotation>();
 			foreach(var rotation in RotationExtensions.AllRotations)
@@ -137,7 +138,7 @@
 			int pieceIndex
 			)
 		{
-
+			Position position = listPlacements.Positioner.PositionLookup[positionIndex];
 			var pieceIndexAlredyThere = listPlacements.Values[positionIndex]?.PieceIndex;
 			if (pieceIndexAlredyThere != null)
 			{
@@ -150,7 +151,7 @@
 					return null;
 				}
 			}
-			if (!listPlacements.Constraints[positionIndex].Pieces.Contains(pieceIndex))
+			if (!listPlacements.Constraints.At(position).Pieces.Contains(pieceIndex))
 			{
 				return null;
 			}
@@ -160,7 +161,7 @@
 			}
 
 			var rotations = PuzzleSolver.GetPossibleRotations(
-				positionIndex,
+				position,
 				pieceIndex,
 				listPlacements
 			);
@@ -202,7 +203,7 @@
 					// because of the constraint checking
 					// I added afterwards
 					var newRotations = PuzzleSolver.GetPossibleRotations(
-						adjacentPlacementIndex,
+						listPlacements.Positioner.PositionLookup[adjacentPlacementIndex],
 						thisPlacement.PieceIndex,
 						listPlacements
 					);
@@ -231,7 +232,7 @@
 			List<int> positionsWithOneConstraint = [];
 			for (
 				int constraintIndex = 0;
-				constraintIndex < listPlacements.Constraints.Count;
+				constraintIndex < listPlacements.Dimensions.Width * listPlacements.Dimensions.Height;
 				++constraintIndex
 			)
 			{
@@ -239,7 +240,8 @@
 				{
 					continue;
 				}
-				var constraint = listPlacements.Constraints[constraintIndex];
+				var constraintPosition = listPlacements.Positioner.PositionLookup[constraintIndex];
+				var constraint = listPlacements.Constraints.At(constraintPosition);
 				if (constraint.Pieces.Count() == 0)
 				{
 					return null;
@@ -255,7 +257,7 @@
 					i => new
 					{
 						PositionIndex = i,
-						PieceIndex = listPlacements.Constraints[i].Pieces.First()
+						PieceIndex = listPlacements.Constraints.At(listPlacements.Positioner.PositionLookup[i]).Pieces.First()
 					}
 				).ToList();
 				if (positionsAndPieces.Select(p => p.PieceIndex).Distinct().Count() < positionsAndPieces.Count())

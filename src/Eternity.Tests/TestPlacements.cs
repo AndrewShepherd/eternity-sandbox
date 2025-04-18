@@ -70,11 +70,12 @@
 			var topRightIndex = 3;
 			var topRightPosition = placements.Positioner.PositionLookup[topRightIndex];
 			Assert.AreEqual(topRightPosition, new Position(3, 0));
-			var constraint = placements.Constraints[topRightIndex];
+			var constraint = placements.Constraints.At(topRightPosition);
 			var patternConstraint = constraint.PatternConstraints;
 			Assert.AreEqual(1, patternConstraint.Right.Count);
 
-			var rightMiddle = placements.Positioner.ReversePositionLookup[new Position(3, 2)];
+			var rightMiddlePosition = new Position(3, 2);
+			var rightMiddle = placements.Positioner.ReversePositionLookup[rightMiddlePosition];
 			int i = 0;
 			while(placements != null)
 			{
@@ -85,7 +86,7 @@
 				);
 				if (placements != null)
 				{
-					constraint = placements.Constraints[rightMiddle];
+					constraint = placements.Constraints.At(rightMiddlePosition);
 					patternConstraint = constraint.PatternConstraints;
 					Assert.AreEqual(
 						1,
