@@ -491,7 +491,8 @@ namespace Eternity
 					{
 						break;
 					}
-					var (constraintIndex, transforms) = qPopResult;
+					var (position, transforms) = qPopResult;
+					var constraintIndex = positioner.ReversePositionLookup[position];
 					var before = constraints[constraintIndex];
 					var after = before.Transform(transforms);
 					if (!before.IsEquiavelentTo(after))
@@ -511,7 +512,7 @@ namespace Eternity
 								if (i != constraintIndex)
 								{
 									q.Push(
-										i,
+										positioner.PositionLookup[i],
 										Transforms.RemovePossiblePiece(thePieceIndex)
 									);
 								}
@@ -532,7 +533,7 @@ namespace Eternity
 							{
 								var left = after.PatternConstraints.Left;
 								q.Push(
-									adjPositionIndex.Value,
+									positioner.PositionLookup[adjPositionIndex.Value],
 									Transforms.ConstrainRightPattern(left)
 								);
 							}
@@ -548,7 +549,7 @@ namespace Eternity
 							{
 								var top = after.PatternConstraints.Top;
 								q.Push(
-									adjPositionIndex.Value,
+									positioner.PositionLookup[adjPositionIndex.Value],
 									Transforms.ConstrainBottomPattern(top)
 								);
 							}
@@ -564,7 +565,7 @@ namespace Eternity
 							{
 								var right = after.PatternConstraints.Right;
 								q.Push(
-									adjPositionIndex.Value,
+									positioner.PositionLookup[adjPositionIndex.Value],
 									Transforms.ConstrainLeftPattern(right)
 								);
 							}
@@ -580,7 +581,7 @@ namespace Eternity
 							{
 								var bottom = after.PatternConstraints.Bottom;
 								q.Push(
-									adjPositionIndex.Value,
+									positioner.PositionLookup[adjPositionIndex.Value],
 									Transforms.ConstrainTopPattern(bottom)
 								);
 							}
@@ -623,7 +624,10 @@ namespace Eternity
 									{
 										if (constraints[i].Pieces.Contains(p))
 										{
-											q.Push(i, Transforms.RemovePossiblePiece(p));
+											q.Push(
+												positioner.PositionLookup[i],
+												Transforms.RemovePossiblePiece(p)
+											);
 										}
 									}
 								}
@@ -662,35 +666,37 @@ namespace Eternity
 				var position = positioner.PositionLookup[placementIndex];
 				if (position.X == 0)
 				{
-					q.Push(placementIndex, Transforms.SetLeftPattern(23));
+					q.Push(position, 
+						Transforms.SetLeftPattern(23)
+					);
 				}
 				else
 				{
-					q.Push(placementIndex, Transforms.ConstrainLeftPattern(NotEdgePatterns));
+					q.Push(position, Transforms.ConstrainLeftPattern(NotEdgePatterns));
 				}
 				if (position.Y == 0)
 				{
-					q.Push(placementIndex, Transforms.SetTopPattern(23));
+					q.Push(position, Transforms.SetTopPattern(23));
 				}
 				else
 				{
-					q.Push(placementIndex, Transforms.ConstrainTopPattern(NotEdgePatterns));
+					q.Push(position, Transforms.ConstrainTopPattern(NotEdgePatterns));
 				}
 				if (position.X == sideLength-1)
 				{
-					q.Push(placementIndex, Transforms.SetRightPattern(23));
+					q.Push(position, Transforms.SetRightPattern(23));
 				}
 				else
 				{
-					q.Push(placementIndex, Transforms.ConstrainRightPattern(NotEdgePatterns));
+					q.Push(position, Transforms.ConstrainRightPattern(NotEdgePatterns));
 				}
 				if (position.Y == sideLength-1)
 				{
-					q.Push(placementIndex, Transforms.SetBottomPattern(23));
+					q.Push(position, Transforms.SetBottomPattern(23));
 				}
 				else
 				{
-					q.Push(placementIndex, Transforms.ConstrainBottomPattern(NotEdgePatterns));
+					q.Push(position, Transforms.ConstrainBottomPattern(NotEdgePatterns));
 				}
 			}
 			return ProcessQueue(constraints, q, positioner);
@@ -709,11 +715,11 @@ namespace Eternity
 			{
 				if (i == positionIndex)
 				{
-					q.Push(i, Transforms.SetPlacement(placement));
+					q.Push(positioner.PositionLookup[i], Transforms.SetPlacement(placement));
 				}
 				else
 				{
-					q.Push(i, Transforms.RemovePossiblePiece(placement.PieceIndex));
+					q.Push(positioner.PositionLookup[i], Transforms.RemovePossiblePiece(placement.PieceIndex));
 				}
 			}
 			var result = ProcessQueue(constraints, q, positioner);

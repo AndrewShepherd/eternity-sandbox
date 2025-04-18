@@ -1,36 +1,33 @@
-﻿namespace Eternity
+﻿using System.Collections.Immutable;
+
+namespace Eternity
 {
+	using Lookup = ImmutableDictionary<Position, ImmutableList<SlotConstraint.TransformAction>>;
 	internal class SlotConstraintTransformQueue
 	{
-		private readonly List<SlotConstraint.TransformAction>[] _transforms = Enumerable.Range(0, 256)
-			.Select(
-				n => new List<SlotConstraint.TransformAction>()
-			).ToArray();
+		private Lookup _transforms = Lookup.Empty;
 
-		private readonly Queue<int> _toProcess = new();
+		private readonly Queue<Position> _toProcess = new();
 
-		public void Push(int constraintIndex, SlotConstraint.TransformAction transform)
+		public void Push(Position position, SlotConstraint.TransformAction transform)
 		{
-			_transforms[constraintIndex].Add(transform);
-			_toProcess.Enqueue(constraintIndex);
+			_transforms = _transforms.TryGetValue(position, out var transforms)
+				? _transforms.SetItem(position, transforms.Add(transform))
+				: _transforms.SetItem(position, ImmutableList<SlotConstraint.TransformAction>.Empty.Add(transform));
+			_toProcess.Enqueue(position);
 		}
 
 		public bool HasItems => _toProcess.Count > 0;
 
-		public Tuple<int, List<SlotConstraint.TransformAction>>? Pop()
+		public Tuple<Position, IReadOnlyList<SlotConstraint.TransformAction>>? Pop()
 		{
-			while(_toProcess.TryDequeue(out int constraintIndex))
+			while(_toProcess.TryDequeue(out Position? position))
 			{
-				if (_transforms[constraintIndex].Any())
+				if (_transforms.TryGetValue(position, out var l))
 				{
-					(
-						var rv,
-						_transforms[constraintIndex]
-					) = (
-						_transforms[constraintIndex],
-						new List<SlotConstraint.TransformAction>()
-					);
-					return Tuple.Create(constraintIndex, rv);
+					_transforms = _transforms.Remove(position);
+					IReadOnlyList<SlotConstraint.TransformAction> rol = l;
+					return Tuple.Create(position, rol);
 				}
 			}
 			return null;
