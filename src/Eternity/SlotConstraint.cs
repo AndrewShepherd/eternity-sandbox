@@ -400,18 +400,16 @@ namespace Eternity
 				&& c1.PatternConstraints.IsEquivalentTo(c2.PatternConstraints)
 			);
 
-		private static int? TransformPositionIndex(Positioner positioner, int positionIndex, Func<Position, Position> t)
+		private static Position? TryTransformPosition(
+			Dimensions dimensions,
+			Position position,
+			Func<Position, Position> t
+		)
 		{
-			var position = positioner.PositionLookup[positionIndex];
-			var adjacentPosition = t(position);
-			if (positioner.ReversePositionLookup.TryGetValue(adjacentPosition, out var result))
-			{
-				return new int?(result);
-			}
-			else
-			{
-				return default;
-			}
+			var newPosition = t(position);
+			return dimensions.Contains(newPosition)
+				? newPosition
+				: null;
 		}
 
 		public static class Transforms
@@ -524,64 +522,64 @@ namespace Eternity
 						}
 						if (before.PatternConstraints.Left.Count() != after.PatternConstraints.Left.Count())
 						{
-							var adjPositionIndex = TransformPositionIndex(
-								positioner,
-								constraintIndex,
+							var adjPosition = TryTransformPosition(
+								positioner.Dimensions,
+								position,
 								Positions.Left
 							);
-							if (adjPositionIndex != null)
+							if (adjPosition != null)
 							{
 								var left = after.PatternConstraints.Left;
 								q.Push(
-									positioner.PositionLookup[adjPositionIndex.Value],
+									adjPosition,
 									Transforms.ConstrainRightPattern(left)
 								);
 							}
 						}
 						if (before.PatternConstraints.Top.Count() != after.PatternConstraints.Top.Count())
 						{
-							var adjPositionIndex = TransformPositionIndex(
-								positioner,
-								constraintIndex,
+							var adjPosition = TryTransformPosition(
+								positioner.Dimensions,
+								position,
 								Positions.Above
 							);
-							if (adjPositionIndex != null)
+							if (adjPosition != null)
 							{
 								var top = after.PatternConstraints.Top;
 								q.Push(
-									positioner.PositionLookup[adjPositionIndex.Value],
+									adjPosition,
 									Transforms.ConstrainBottomPattern(top)
 								);
 							}
 						}
 						if (before.PatternConstraints.Right.Count() != after.PatternConstraints.Right.Count())
 						{
-							var adjPositionIndex = TransformPositionIndex(
-								positioner,
-								constraintIndex,
+							var adjPosition = TryTransformPosition(
+								positioner.Dimensions,
+								position,
 								Positions.Right
 							);
-							if (adjPositionIndex != null)
+							if (adjPosition != null)
 							{
 								var right = after.PatternConstraints.Right;
 								q.Push(
-									positioner.PositionLookup[adjPositionIndex.Value],
+									adjPosition,
 									Transforms.ConstrainLeftPattern(right)
 								);
 							}
 						}
 						if (before.PatternConstraints.Bottom.Count() != after.PatternConstraints.Bottom.Count())
 						{
-							var adjPositionIndex = TransformPositionIndex(
-								positioner,
-								constraintIndex,
+							var adjPosition = TryTransformPosition(
+								positioner.Dimensions,
+								position,
 								Positions.Below
 							);
-							if (adjPositionIndex != null)
+							if (adjPosition != null)
 							{
 								var bottom = after.PatternConstraints.Bottom;
 								q.Push(
-									positioner.PositionLookup[adjPositionIndex.Value],
+									adjPosition,
 									Transforms.ConstrainTopPattern(bottom)
 								);
 							}
