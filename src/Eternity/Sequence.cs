@@ -7,8 +7,8 @@
 	{
 		public readonly int PieceCount = pieceCount;
 
-		public readonly IReadOnlyList<int> Dimensions = Enumerable.Range(0, pieceCount - 1).
-			Select(i => pieceCount - 1 - i).ToArray();
+		public readonly IReadOnlyList<int> Dimensions = Enumerable.Range(0, pieceCount).
+			Select(i => pieceCount - i).ToArray();
 	}
 
 	public static class Sequence
@@ -93,25 +93,14 @@
 
 		public static int ListPlacementIndexToSequenceIndex(
 			int listPlacementIndex
-		) =>
-			listPlacementIndex switch
-			{
-				0 => 0, // Not sure what to do here
-				_ => listPlacementIndex - 1
-			};
-
-		public static int[] SequenceIndexToPositionIndexes(int sequenceIndex) =>
-			[sequenceIndex + 1];
+		) => listPlacementIndex;
 
 		public static IEnumerable<int> GeneratePieceIndexes(
 			IReadOnlyList<int> sequence
 		)
 		{
-			// Working under the assumption that the first piece is a corner
-			yield return 0;
-			var pieceCount = sequence.Count + 1;
+			var pieceCount = sequence.Count;
 			var used = new bool[pieceCount];
-			used[0] = true;
 			for(int i = 0; i < sequence.Count; ++i)
 			{
 				var sequenceValue = sequence[i];

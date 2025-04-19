@@ -4,7 +4,7 @@
 
 	public class PlacementStack
 	{
-		public record class StackEntry(int PieceIndex, Placements Placements);
+		public record class StackEntry(int PieceIndex, Placements Placements, IPositioner Positioner);
 
 		public StackEntry?[] _stackEntries = new StackEntry?[256];
 
@@ -25,9 +25,12 @@
 			var matchingStackEntryIndex = -1;
 			if (_initialPlacements == null)
 			{
-				_initialPlacements = Placements.CreateInitial(pieceSides);
+				_initialPlacements = Placements.CreateInitial(
+					pieceSides
+				);
 			}
 			Placements matchingPlacements = _initialPlacements;
+			IPositioner positioner = new DynamicPositioner(_initialPlacements.Dimensions);
 
 			var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
 			int i = 0;
@@ -53,15 +56,18 @@
 				}
 				matchingStackEntryIndex = i;
 				matchingPlacements = thisEntry.Placements;
+				positioner = thisEntry.Positioner;
 			}
 
 			for (; true; ++i)
 			{
 				// This is the bit where the positioner
 				// dynamically chooses the position
+				var (nextPosition, newPositioner) = positioner.GetNext(matchingPlacements.Constraints);
+
 				var newPlacements = PuzzleSolver.TryAddPiece(
 					matchingPlacements,
-					matchingPlacements.Positioner.PositionLookup[i],
+					nextPosition,
 					pieceIndexEnumerator.Current
 				);
 				if (newPlacements == null)
@@ -73,8 +79,13 @@
 					}
 					return (i, lastPlacement);
 				}
-				this._stackEntries[i] = new StackEntry(pieceIndexEnumerator.Current, newPlacements);
+				this._stackEntries[i] = new StackEntry(
+					pieceIndexEnumerator.Current, 
+					newPlacements,
+					newPositioner
+				);
 				matchingPlacements = newPlacements;
+				positioner = newPositioner;
 				if (!pieceIndexEnumerator.MoveNext())
 				{
 					break;

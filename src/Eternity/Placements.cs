@@ -26,7 +26,6 @@
 				Constraints c =>
 					new Placements
 					{
-						Positioner = this.Positioner,
 						Dimensions = this.Dimensions,
 						PieceSides = this.PieceSides,
 						_placements = _placements.Add(placement),
@@ -39,7 +38,6 @@
 		public IReadOnlyList<Placement> Values => _placements;
 
 		public required IReadOnlyList<ImmutableArray<int>> PieceSides { get; init; }
-		public required Positioner Positioner { get; init; }
 
 		public required Dimensions Dimensions { get; init; }
 
@@ -61,7 +59,6 @@
 				var sqrt = (int)Math.Round(Math.Sqrt(pieceSides.Count));
 				return new Placements
 				{
-					Positioner = Positioner.Generate(pieceSides.Count),
 					Dimensions = new Dimensions(sqrt, sqrt),
 					_placements = ImmutableList<Placement>.Empty,
 					PieceSides = pieceSides,
