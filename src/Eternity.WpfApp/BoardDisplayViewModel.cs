@@ -90,12 +90,9 @@ namespace Eternity.WpfApp
 
 			if (selectedSequenceIndex >= 0)
 			{
-				var highlightedPositionIndexes = SequenceIndexToPositionIndexes(selectedSequenceIndex);
-				var highlightedPositions = highlightedPositionIndexes
-					.Select(i => placements.Positioner.PositionLookup[i])
-					.ToArray();
-				foreach (var position in highlightedPositions)
+				if (selectedSequenceIndex < placements.Values.Count)
 				{
+					var position = placements.Values[selectedSequenceIndex].Position;
 					canvasItems.Add(
 						new CanvasHighlightItem
 						{
