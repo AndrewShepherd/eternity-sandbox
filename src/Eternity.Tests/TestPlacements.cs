@@ -83,7 +83,6 @@
 			Assert.AreEqual(1, patternConstraint.Right.Count);
 
 			var rightMiddlePosition = new Position(3, 2);
-			var rightMiddle = placements.Positioner.ReversePositionLookup[rightMiddlePosition];
 			int i = 0;
 			while(placements != null)
 			{
