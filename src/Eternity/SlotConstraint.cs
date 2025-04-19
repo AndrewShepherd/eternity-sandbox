@@ -704,13 +704,12 @@ namespace Eternity
 
 		public static ImmutableArray<SlotConstraint>? SetPlacement(
 			this ImmutableArray<SlotConstraint> constraints,
-			Position position,
 			Placement placement,
 			Dimensions dimensions
 			)
 		{
 			var q = new SlotConstraintTransformQueue();
-			int positionIndex = dimensions.PositionToIndex(position);
+			int positionIndex = dimensions.PositionToIndex(placement.Position);
 			for (int i = 0; i < constraints.Length; ++i)
 			{
 				if (i == positionIndex)

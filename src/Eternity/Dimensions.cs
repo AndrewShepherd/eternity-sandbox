@@ -16,6 +16,8 @@
 		public static int PositionToIndex(this Dimensions d, Position p) =>
 			p.Y * d.Width + p.X;
 
+		public static int PositionCount(this Dimensions d) => d.Width * d.Height;
+
 		public static IEnumerable<Position> GetAllPositions(this Dimensions d)
 		{
 			for(int x = 0; x < d.Width; ++x)

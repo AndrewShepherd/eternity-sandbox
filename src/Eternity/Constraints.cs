@@ -18,10 +18,9 @@ namespace Eternity
 			_constraints = constraints;
 		}
 
-		public Constraints? SetPlacement(Position position, Placement placement)
+		public Constraints? SetPlacement(Placement placement)
 		{
 			var newConstraints = _constraints.SetPlacement(
-				position,
 				placement,
 				_dimensions
 			);

@@ -11,18 +11,15 @@
 	//
 	public class Placements
 	{
-		private static ImmutableArray<bool> NoUsedPieceIndexes = new bool[256].ToImmutableArray();
-		private ImmutableArray<Placement?> _placements = [];
-		private ImmutableArray<bool> _usedPieceIndexes = NoUsedPieceIndexes;
+		private ImmutableList<Placement> _placements = ImmutableList<Placement>.Empty;
 
 		private Constraints _constraints;
 
 		public Constraints Constraints => _constraints;
 
-		public Placements? SetItem(Position position, Placement placement)
+		public Placements? SetItem(Placement placement)
 		{
 			return _constraints.SetPlacement(
-				position,
 				placement
 			) switch
 			{
@@ -32,25 +29,20 @@
 						Positioner = this.Positioner,
 						Dimensions = this.Dimensions,
 						PieceSides = this.PieceSides,
-						_placements = _placements.SetItem(
-							this.Positioner.ReversePositionLookup[position],
-							placement
-						),
-						_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
+						_placements = _placements.Add(placement),
 						_constraints = c
 					},
 				_ => null
 			};
 		}
 
-		public IReadOnlyList<Placement?> Values => _placements;
+		public IReadOnlyList<Placement> Values => _placements;
 
 		public required IReadOnlyList<ImmutableArray<int>> PieceSides { get; init; }
 		public required Positioner Positioner { get; init; }
 
 		public required Dimensions Dimensions { get; init; }
 
-		public bool ContainsPieceIndex(int pieceIndex) => _usedPieceIndexes[pieceIndex];
 
 		private Placements()
 		{
@@ -71,7 +63,7 @@
 				{
 					Positioner = Positioner.Generate(pieceSides.Count),
 					Dimensions = new Dimensions(sqrt, sqrt),
-					_placements = new Placement?[pieceSides.Count].ToImmutableArray(),
+					_placements = ImmutableList<Placement>.Empty,
 					PieceSides = pieceSides,
 					_constraints = initialConstraints
 				};

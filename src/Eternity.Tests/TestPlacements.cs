@@ -15,7 +15,7 @@
 			Assert.AreEqual(16, placements.Values.Count);
 			var newPlacements = PuzzleSolver.TryAddPiece(
 				placements,
-				0,
+				placements.Positioner.PositionLookup[0],
 				0
 			);
 			Assert.IsNotNull(newPlacements);
@@ -44,14 +44,22 @@
 				var pieceIndex = pieceOrder[i];
 				if (placements != null)
 				{
-					var newPlacements = PuzzleSolver.TryAddPiece(placements, i, pieceIndex);
+					var newPlacements = PuzzleSolver.TryAddPiece(
+						placements,
+						placements.Positioner.PositionLookup[i],
+						pieceIndex
+					);
 					if (newPlacements == null)
 					{
 						Assert.AreEqual(24, i);
 						var count = placements.Values.Where(v => v != null).Count();
 						Assert.AreEqual(36, count);
 						// Doing it again
-						newPlacements = PuzzleSolver.TryAddPiece(placements, i, pieceIndex);
+						newPlacements = PuzzleSolver.TryAddPiece(
+							placements,
+							placements.Positioner.PositionLookup[i],
+							pieceIndex
+						);
 						break;
 					}
 					placements = newPlacements;
@@ -81,7 +89,7 @@
 			{
 				placements = PuzzleSolver.TryAddPiece(
 					placements,
-					i,
+					placements.Positioner.PositionLookup[i],
 					i
 				);
 				if (placements != null)

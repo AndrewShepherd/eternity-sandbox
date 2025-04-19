@@ -57,9 +57,11 @@
 
 			for (; true; ++i)
 			{
+				// This is the bit where the positioner
+				// dynamically chooses the position
 				var newPlacements = PuzzleSolver.TryAddPiece(
 					matchingPlacements,
-					i,
+					matchingPlacements.Positioner.PositionLookup[i],
 					pieceIndexEnumerator.Current
 				);
 				if (newPlacements == null)

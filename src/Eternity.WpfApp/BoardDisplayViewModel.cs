@@ -142,7 +142,7 @@ namespace Eternity.WpfApp
 				canvasItemGenerationParameters.CanvasSize.Width,
 				canvasItemGenerationParameters.CanvasSize.Height
 			);
-			var boardSquares = canvasItemGenerationParameters.Placements.Values.Count;
+			var boardSquares = canvasItemGenerationParameters.Placements.Dimensions.PositionCount();
 			var squaresPerSide = Math.Sqrt(boardSquares);
 			return boardSideLength / squaresPerSide;
 		}
