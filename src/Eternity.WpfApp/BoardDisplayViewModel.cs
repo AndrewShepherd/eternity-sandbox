@@ -83,7 +83,7 @@ namespace Eternity.WpfApp
 				bitmapWidth,
 				bitmapHeight,
 				placements.Constraints,
-				placements.Positioner
+				placements.Dimensions
 			);
 
 			var canvasItems = pieceItems.Cast<CanvasItem>().Concat(constraintItems).ToList();

@@ -19,27 +19,10 @@
 
 		public Constraints Constraints => _constraints;
 
-		public Placements? SetItem(int positionIndex, Placement placement)
+		public Placements? SetItem(Position position, Placement placement)
 		{
-			var placementAlreadyThere = _placements[positionIndex];
-
-			if (placementAlreadyThere == null)
-			{
-				if (_usedPieceIndexes[placement.PieceIndex])
-				{
-					throw new Exception("Attempting to place the same piece twice");
-				}
-			}
-			else
-			{
-				if (placementAlreadyThere.PieceIndex != placement.PieceIndex)
-				{
-					throw new Exception("Attempting to set a position that's already been set");
-				}
-			}
-
 			return _constraints.SetPlacement(
-				this.Positioner.PositionLookup[positionIndex], 
+				position,
 				placement
 			) switch
 			{
@@ -49,7 +32,10 @@
 						Positioner = this.Positioner,
 						Dimensions = this.Dimensions,
 						PieceSides = this.PieceSides,
-						_placements = _placements.SetItem(positionIndex, placement),
+						_placements = _placements.SetItem(
+							this.Positioner.ReversePositionLookup[position],
+							placement
+						),
 						_usedPieceIndexes = _usedPieceIndexes.SetItem(placement.PieceIndex, true),
 						_constraints = c
 					},

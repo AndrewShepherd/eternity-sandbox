@@ -92,12 +92,10 @@ namespace Eternity.WpfApp
 			double squareWidth,
 			double squareHeight,
 			Constraints constraints,
-			Positioner positioner)
+			Dimensions dimensions)
 		{
-
-			for(int i = 0; i < positioner.PositionLookup.Count; ++i)
+			foreach(var position in dimensions.GetAllPositions())
 			{
-				var position = positioner.PositionLookup[i];
 				var constraint = constraints.At(position);
 				if (constraint.Pieces.Count == 1)
 				{
@@ -128,7 +126,7 @@ namespace Eternity.WpfApp
 			);
 
 			CanvasPieceItem? RenderFromPatternConstraints(
-				int placementIndex,
+				Position position,
 				ImmutableHashSet<int> constraints,
 				int rotation
 			)
@@ -137,7 +135,6 @@ namespace Eternity.WpfApp
 				{
 					return null;
 				}
-				var position = placements.Positioner.PositionLookup[placementIndex];
 				var image = triangleImages[constraints.First()];
 				var left = position.X * pieceWidth;
 				var top = position.Y * pieceHeight;
@@ -151,9 +148,8 @@ namespace Eternity.WpfApp
 					Rotation = rotation
 				};
 			}
-			for(int placementIndex = 0; placementIndex < placements.Positioner.PositionLookup.Count; ++placementIndex)
+			foreach(var position in placements.Dimensions.GetAllPositions())
 			{
-				var position = placements.Positioner.PositionLookup[placementIndex];
 				var patternConstraints = placements.Constraints.At(position).PatternConstraints;
 				var boogles = new[]
 				{
@@ -165,7 +161,7 @@ namespace Eternity.WpfApp
 				foreach(var b in boogles)
 				{
 					var (c, r) = b;
-					var pieceItem = RenderFromPatternConstraints(placementIndex, c, r);
+					var pieceItem = RenderFromPatternConstraints(position, c, r);
 					if (pieceItem != null)
 					{
 						yield return pieceItem;

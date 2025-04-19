@@ -173,62 +173,14 @@
 
 
 			var attempt = listPlacements.SetItem(
-				positionIndex,new Placement(pieceIndex, rotations.ToArray()));
+				position,
+				new Placement(pieceIndex, rotations.ToArray())
+			);
 			if (attempt == null)
 			{
 				return null;
 			}
 			listPlacements = attempt;
-			// There may be existing placements which had multiple rotations
-			// as a result of placing this piece they may no longer have multiple
-			// rotations
-			var adjacentPlacementIndexes = PuzzleSolver.GetAdjacentPlacementIndexes(
-				positionIndex,
-				listPlacements.Positioner
-			)
-				.Where(
-					pi => listPlacements.Values[pi] != null
-					&& listPlacements.Values[pi]!.Rotations.Length > 1
-				).ToArray();
-			if (adjacentPlacementIndexes.Length > 0)
-			{
-				foreach (var adjacentPlacementIndex in adjacentPlacementIndexes)
-				{
-					var thisPlacement = listPlacements.Values[adjacentPlacementIndex];
-					if (thisPlacement == null)
-					{
-						throw new Exception("This cannot have happend");
-					}
-					// This test isn't necessary anymore
-					// because of the constraint checking
-					// I added afterwards
-					var newRotations = PuzzleSolver.GetPossibleRotations(
-						listPlacements.Positioner.PositionLookup[adjacentPlacementIndex],
-						thisPlacement.PieceIndex,
-						listPlacements
-					);
-					if (newRotations.Count == 0)
-					{
-						throw new Exception("After placing a piece, an existing piece was in an illegal state");
-					}
-					if (newRotations.Count < thisPlacement.Rotations.Length)
-					{
-						var thisAttempt = listPlacements.SetItem(
-							adjacentPlacementIndex,
-							new(
-								thisPlacement.PieceIndex,
-								newRotations.ToArray()
-							)
-						);
-						if (thisAttempt == null)
-						{
-							return null;
-						}
-						listPlacements = thisAttempt;
-					}
-				}
-			}
-
 			List<int> positionsWithOneConstraint = [];
 			for (
 				int constraintIndex = 0;
