@@ -46,6 +46,7 @@ namespace Eternity.WpfApp
 			OpenFileDialog openFileDialog = new OpenFileDialog();
 			if (openFileDialog.ShowDialog() == true)
 			{
+				this.Title = System.IO.Path.GetFileNameWithoutExtension(openFileDialog.FileName);
 				var txt = File.ReadAllText(openFileDialog.FileName);
 				var pieces = PieceTextReader.Parse(txt);
 				var vm = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
