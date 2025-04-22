@@ -637,7 +637,6 @@ namespace Eternity
 			return constraints;
 		}
 
-
 		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
 			var constraintsArray = new SlotConstraint[pieceSides.Count];
@@ -698,7 +697,32 @@ namespace Eternity
 					q.Push(position, Transforms.ConstrainBottomPattern(NotEdgePatterns));
 				}
 			}
-			return ProcessQueue(constraints, q, dimensions);
+
+			
+			var nullableResult = ProcessQueue(constraints, q, dimensions);
+			if (nullableResult == null)
+			{
+				return null;
+			}
+			// Find the first corner piece and put it in the top left corner
+			// It never moves!
+			int firstCornerPieceIndex = -1;
+			for(int i = 0; i < pieceSides.Count; ++i)
+			{
+				if (pieceSides[i].Where(ps => ps == 23).Count() == 2)
+				{
+					firstCornerPieceIndex = i;
+					break;
+				}
+			}
+			if (firstCornerPieceIndex == -1)
+			{
+				return null;
+			}
+			return nullableResult?.SetPlacement(
+				new Placement(new Position(0, 0), firstCornerPieceIndex, []),
+				dimensions
+			);
 		}
 
 

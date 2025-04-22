@@ -22,7 +22,7 @@ namespace Eternity.WpfApp
 			var pieceIndexes = Sequence.GeneratePieceIndexes(sequence);
 			(int successfulAdds, Placements placements) = _placementStack.ApplyPieceOrder(
 				this._pieceSides,	
-				Sequence.GeneratePieceIndexes(sequence)
+				sequence
 			);
 			_badSequenceIndex = Sequence.ListPlacementIndexToSequenceIndex(successfulAdds);
 			return placements;

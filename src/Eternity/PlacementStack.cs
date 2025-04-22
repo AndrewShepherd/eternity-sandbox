@@ -18,7 +18,7 @@
 		private Placements? _initialPlacements;
 		public (int, Placements) ApplyPieceOrder(
 			IReadOnlyList<ImmutableArray<int>> pieceSides,
-			IEnumerable<int> pieceIndexes
+			IEnumerable<int> sequence
 		)
 		{
 			// Find the stack entry that matches this
@@ -32,7 +32,7 @@
 			Placements matchingPlacements = _initialPlacements;
 			IPositioner positioner = new DynamicPositioner(_initialPlacements.Dimensions);
 
-			var pieceIndexEnumerator = pieceIndexes.GetEnumerator();
+			var pieceIndexEnumerator = sequence.GetEnumerator();
 			int i = 0;
 			for (i = 0; i < this._stackEntries.Length; ++i)
 			{
@@ -64,14 +64,24 @@
 				// This is the bit where the positioner
 				// dynamically chooses the position
 				var (nextPosition, newPositioner) = positioner.GetNext(matchingPlacements.Constraints);
-
-				var newPlacements = PuzzleSolver.TryAddPiece(
-					matchingPlacements,
-					nextPosition,
-					pieceIndexEnumerator.Current
-				);
+				Placements? newPlacements = null;
+				int pieceIndex = pieceIndexEnumerator.Current;
+				var possiblePieces = matchingPlacements.Constraints.At(nextPosition).Pieces;
+				if (pieceIndex < possiblePieces.Count)
+				{
+					var pieceId = possiblePieces.OrderBy(p => p).ElementAt(pieceIndex);
+					newPlacements = PuzzleSolver.TryAddPiece(
+						matchingPlacements,
+						nextPosition,
+						pieceId
+					);
+				}
 				if (newPlacements == null)
 				{
+					if (i == 0)
+					{
+						return (0, _initialPlacements);
+					}
 					var lastPlacement = this._stackEntries[i - 1]?.Placements;
 					if (lastPlacement == null)
 					{

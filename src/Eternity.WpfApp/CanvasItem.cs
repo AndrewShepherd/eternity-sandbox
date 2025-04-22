@@ -66,7 +66,7 @@ namespace Eternity.WpfApp
 		{
 			return (placement, index) =>
 			{
-				var position = Positions.PositionLookup[index];
+				var position = placement.Position;
 				var left = position.X * imageWidth;
 				var top = position.Y * imageHeight;
 				var pieceSides = placements.PieceSides[placement.PieceIndex];
