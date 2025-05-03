@@ -30,7 +30,7 @@
 				);
 			}
 			Placements matchingPlacements = _initialPlacements;
-			IPositioner positioner = new DynamicPositioner(_initialPlacements.Dimensions);
+			IPositioner positioner = new DynamicPositionerAdjacentsOnly(_initialPlacements.Dimensions);
 
 			var pieceIndexEnumerator = sequence.GetEnumerator();
 			int i = 0;

@@ -69,7 +69,7 @@ namespace Eternity
 
 	public record class SlotConstraint
 	{
-		public required ImmutableHashSet<int> Pieces { get; init; }
+		public required ImmutableBitArray Pieces { get; init; }
 
 		public MultiPatternConstraints PatternConstraints = new()
 		{
@@ -84,12 +84,12 @@ namespace Eternity
 		{
 		}
 
-		public readonly static SlotConstraint Never = new()
-		{
-			PiecePatternLookup = ImmutableArray<ImmutableArray<int>>.Empty,
-			PatternConstraints = MultiPatternConstraints.Never,
-			Pieces = ImmutableHashSet<int>.Empty
-		};
+		//public readonly static SlotConstraint Never = new()
+		//{
+		//	PiecePatternLookup = ImmutableArray<ImmutableArray<int>>.Empty,
+		//	PatternConstraints = MultiPatternConstraints.Never,
+		//	Pieces = ImmutableHashSet<int>.Empty
+		//};
 
 		public SlotConstraint SetPlacement(
 			Placement placement
@@ -117,15 +117,16 @@ namespace Eternity
 			}
 			return this with
 			{
-				Pieces = new[] { placement.PieceIndex }.ToImmutableHashSet(),
+				Pieces = ImmutableBitArray.SingleValue(placement.PieceIndex),
 				PatternConstraints = newPatternConstraints.Intersect(this.PatternConstraints)
 			};
 		}
 
 
-		private MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
-			ImmutableHashSet<int> availablePieces,
-			MultiPatternConstraints currentConstraints
+		private static MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
+			IEnumerable<int> availablePieces,
+			MultiPatternConstraints currentConstraints,
+			IReadOnlyList<ImmutableArray<int>> piecePatternLookup
 		)
 		{
 			var top = new HashSet<int>();
@@ -135,7 +136,7 @@ namespace Eternity
 
 			foreach (var pieceIndex in availablePieces)
 			{
-				var piecePattern = this.PiecePatternLookup[pieceIndex];
+				var piecePattern = piecePatternLookup[pieceIndex];
 				foreach (var rotation in RotationExtensions.AllRotations)
 				{
 					var rotatedPattern = RotationExtensions.Rotate(piecePattern, rotation);
@@ -162,8 +163,8 @@ namespace Eternity
 			};
 		}
 
-		private ImmutableHashSet<int> FilterSetBasedOnPatterns(
-			ImmutableHashSet<int> hashSet,
+		private ImmutableBitArray FilterSetBasedOnPatterns(
+			ImmutableBitArray hashSet,
 			MultiPatternConstraints c
 		)
 		{
@@ -196,15 +197,16 @@ namespace Eternity
 
 		private(
 			MultiPatternConstraints,
-			ImmutableHashSet<int>
+			ImmutableBitArray
 		) UpdatePatternConstraintsBasedOnPiecesRecursive(
 			MultiPatternConstraints patternContraints,
-			ImmutableHashSet<int> pieces
+			ImmutableBitArray pieces
 		)
 		{
 			var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
 				pieces,
-				patternContraints
+				patternContraints,
+				this.PiecePatternLookup
 			);
 			if (newConstraints.IsEquivalentTo(patternContraints))
 			{
@@ -224,10 +226,10 @@ namespace Eternity
 
 		private (
 			MultiPatternConstraints,
-			ImmutableHashSet<int>
+			ImmutableBitArray
 		) UpdatePiecesBasedOnPatternConstraintsRecursive(
 			MultiPatternConstraints patternContraints,
-			ImmutableHashSet<int> pieces
+			ImmutableBitArray pieces
 		)
 		{
 			var newPieces = FilterSetBasedOnPatterns(pieces, patternContraints);
@@ -236,7 +238,8 @@ namespace Eternity
 				return (
 					AdjustPatternConstraintsBasedOnAvailablePieces(
 						newPieces,
-						patternContraints
+						patternContraints,
+						this.PiecePatternLookup
 					), 
 					pieces
 				);
@@ -268,29 +271,6 @@ namespace Eternity
 				PatternConstraints = newConstraints,
 				Pieces = newPieces
 			};
-		}
-
-		public SlotConstraint RemovePossiblePiece(
-			int pieceIndex
-		)
-		{
-			if (Pieces.Contains(pieceIndex))
-			{
-				var newPieces = this.Pieces.Remove(pieceIndex);
-				var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-					newPieces,
-					this.PatternConstraints
-				);
-				return this with
-				{
-					Pieces = newPieces,
-					PatternConstraints = newConstraints
-				};
-			}
-			else
-			{
-				return this;
-			}
 		}
 
 		public SlotConstraint SetTopPattern(
@@ -358,7 +338,7 @@ namespace Eternity
 		);
 
 
-		public delegate (MultiPatternConstraints, ImmutableHashSet<int>) TransformAction(MultiPatternConstraints mpc, ImmutableHashSet<int> pieces);
+		public delegate (MultiPatternConstraints, ImmutableBitArray) TransformAction(MultiPatternConstraints mpc, ImmutableBitArray pieces);
 
 		public SlotConstraint Transform(IEnumerable<TransformAction> actions)
 		{
@@ -415,7 +395,7 @@ namespace Eternity
 		public static class Transforms
 		{
 			public static SlotConstraint.TransformAction SetPlacement(Placement p) =>
-				(patterns, pieces) => (patterns, new[] { p.PieceIndex }.ToImmutableHashSet());
+				(patterns, pieces) => (patterns, ImmutableBitArray.SingleValue(p.PieceIndex));
 
 			public static SlotConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
 				(patterns, pieces) => (patterns, pieces.Remove(pieceIndex));
@@ -474,11 +454,12 @@ namespace Eternity
 		}
 
 		private static ImmutableArray<SlotConstraint>? ProcessQueue(
-			ImmutableArray<SlotConstraint> constraints,
+			ImmutableArray<SlotConstraint> origionalConstraints,
 			SlotConstraintTransformQueue q,
 			Dimensions dimensions
 		)
 		{
+			SlotConstraint[] constraints = origionalConstraints.ToArray();
 			while (q.HasItems)
 			{
 				var newItemsWithTwo = new List<int>();
@@ -495,7 +476,7 @@ namespace Eternity
 					var after = before.Transform(transforms);
 					if (!before.IsEquiavelentTo(after))
 					{
-						constraints = constraints.SetItem(constraintIndex, after);
+						constraints[constraintIndex] = after;
 						if (after.Pieces.Count() == 0)
 						{
 							// The board is in an invalid state.
@@ -505,13 +486,14 @@ namespace Eternity
 						else if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
 						{
 							var thePieceIndex = after.Pieces.First();
+							var removePiece = Transforms.RemovePossiblePiece(thePieceIndex);
 							for (var i = 0; i < constraints.Length; ++i)
 							{
 								if (i != constraintIndex)
 								{
 									q.Push(
 										dimensions.IndexToPosition(i),
-										Transforms.RemovePossiblePiece(thePieceIndex)
+										removePiece
 									);
 								}
 							}
@@ -634,15 +616,14 @@ namespace Eternity
 					}
 				}
 			}
-			return constraints;
+			return constraints.ToImmutableArray();
 		}
 
 		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
 			var constraintsArray = new SlotConstraint[pieceSides.Count];
 
-			ImmutableHashSet<int> AllPieces = Enumerable.Range(0, pieceSides.Count)
-				.ToImmutableHashSet();
+			ImmutableBitArray AllPieces = ImmutableBitArray.AllPieces(pieceSides.Count);
 
 			var initialConstraint = new SlotConstraint
 			{
@@ -734,6 +715,7 @@ namespace Eternity
 		{
 			var q = new SlotConstraintTransformQueue();
 			int positionIndex = dimensions.PositionToIndex(placement.Position);
+			var removePiece = Transforms.RemovePossiblePiece(placement.PieceIndex);
 			for (int i = 0; i < constraints.Length; ++i)
 			{
 				if (i == positionIndex)
@@ -747,7 +729,7 @@ namespace Eternity
 				{
 					q.Push(
 						dimensions.IndexToPosition(i),
-						Transforms.RemovePossiblePiece(placement.PieceIndex)
+						removePiece
 					);
 				}
 			}

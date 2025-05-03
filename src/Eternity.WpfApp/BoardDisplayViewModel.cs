@@ -146,6 +146,7 @@ namespace Eternity.WpfApp
 
 		private void GenerateCanvasItems(CanvasItemGenerationParameters canvasItemGenerationParameters)
 		{
+			_triangles = _triangles ?? LoadTriangles().ToImmutableArray();
 			var triangleImages = _triangles ?? LoadTriangles().ToImmutableArray();
 
 			var squareSideLength = CalculateSquareSideLength(canvasItemGenerationParameters);
