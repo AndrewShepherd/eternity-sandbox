@@ -9,11 +9,11 @@ using System.Windows.Media;
 
 namespace Eternity.WpfApp
 {
-	record class ValueAndDate(int value, DateTime date);
+	record class ValueAndDate(StackEntry value, DateTime date);
 
 	public class SequenceControlViewModel : INotifyPropertyChanged
 	{
-		private IReadOnlyList<int> _sequence = new SequenceSpecs(256).GenerateFirst();
+		private IReadOnlyList<StackEntry> _stackEntries = [];
 
 		private IReadOnlyList<ValueAndDate>? _valuesAndDates = null;
 
@@ -37,30 +37,26 @@ namespace Eternity.WpfApp
 				R = (byte)converted
 			};
 		}
-		public IReadOnlyList<int> Sequence
+		public IReadOnlyList<StackEntry> StackEntries
 		{
-			get => _sequence;
+			get => _stackEntries;
 			set
 			{
-				if (_sequence != value)
+				if (_stackEntries != value)
 				{
-					if (_valuesAndDates != null && value.Count != _valuesAndDates.Count)
-					{
-						_valuesAndDates = null;
-					}
-					_sequence = value;
+					_stackEntries = value;
 					DateTime dateTimeNow = DateTime.Now;
 					if (_valuesAndDates == null)
 					{
 						var d = DateTime.MinValue;
-						_valuesAndDates = _sequence.Select(
+						_valuesAndDates = _stackEntries.Select(
 							n =>
 							new ValueAndDate(n, d)
 						).ToArray();
 					}
 					else
 					{
-						_valuesAndDates = _sequence.Zip(
+						_valuesAndDates = _stackEntries.Zip(
 							_valuesAndDates,
 							(s, v) =>
 							{
@@ -76,8 +72,26 @@ namespace Eternity.WpfApp
 						).ToArray();
 					}
 
-					
-					for (int i = 0; i < _sequence.Count; i++)
+					var newValues = new List<ValueAndDate>();
+					for (int i = _valuesAndDates.Count; i < _stackEntries.Count; i++)
+					{
+						newValues.Add(new ValueAndDate(_stackEntries[i], dateTimeNow));	
+					}
+					if (newValues.Count > 0)
+					{
+						_valuesAndDates = _valuesAndDates.Concat(newValues).ToArray();
+					}
+					var firstPlacements = _stackEntries[0].Placements;
+					int expectedCount = 0;
+					if (firstPlacements != null)
+					{
+						expectedCount = firstPlacements.Dimensions.Width * firstPlacements.Dimensions.Height;
+					}
+					if (this.SequenceListEntries.Count != expectedCount)
+					{
+						this.SequenceListEntries.Clear();
+					}
+					for (int i = 0; i < _stackEntries.Count; i++)
 					{
 						if (i >= _valuesAndDates.Count)
 						{
@@ -87,22 +101,34 @@ namespace Eternity.WpfApp
 						if (i >= this.SequenceListEntries.Count)
 						{
 							this.SequenceListEntries.Add(
-								new()
+								new(_stackEntries[i])
 								{
 									ForegroundColor = ConvertToForegroundColor(age),
-									Value = _sequence[i]
 								}
 							);
 						}
 						else
 						{
-							this.SequenceListEntries[i].Value = _sequence[i];
+							this.SequenceListEntries[i].Value = _stackEntries[i];
 							this.SequenceListEntries[i].ForegroundColor = ConvertToForegroundColor(age);
 						}
 					}
-					while(this.SequenceListEntries.Count> _sequence.Count)
+					for (int i = _stackEntries.Count; i < expectedCount; ++i)
 					{
-						this.SequenceListEntries.RemoveAt(this.SequenceListEntries.Count - 1);
+						if (i >= this.SequenceListEntries.Count)
+						{
+							this.SequenceListEntries.Add(
+								new(null)
+								{
+									ForegroundColor = Colors.LightGray
+								}
+							);
+						}
+						else
+						{
+							this.SequenceListEntries[i].Value = null;
+							this.SequenceListEntries[i].ForegroundColor = Colors.LightGray;
+						}
 					}
 					_notifier.PropertyChanged(nameof(Sequence));
 				}
@@ -140,7 +166,6 @@ namespace Eternity.WpfApp
 
 		public ObservableCollection<SequenceListEntry> SequenceListEntries { get; set; } =
 			new ObservableCollection<SequenceListEntry>(
-				Enumerable.Range(0, 256).Select(d => new SequenceListEntry { Value = 0 })
 			);
 
 	}

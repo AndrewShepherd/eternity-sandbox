@@ -460,6 +460,7 @@ namespace Eternity
 		)
 		{
 			SlotConstraint[] constraints = origionalConstraints.ToArray();
+			bool anyChanges = false;
 			while (q.HasItems)
 			{
 				var newItemsWithTwo = new List<int>();
@@ -476,6 +477,7 @@ namespace Eternity
 					var after = before.Transform(transforms);
 					if (!before.IsEquiavelentTo(after))
 					{
+						anyChanges = true;
 						constraints[constraintIndex] = after;
 						if (after.Pieces.Count() == 0)
 						{
@@ -616,7 +618,7 @@ namespace Eternity
 					}
 				}
 			}
-			return constraints.ToImmutableArray();
+			return anyChanges ? constraints.ToImmutableArray() : origionalConstraints;
 		}
 
 		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<int>> pieceSides)
@@ -733,14 +735,7 @@ namespace Eternity
 					);
 				}
 			}
-			var result = ProcessQueue(constraints, q, dimensions);
-
-			if (result == null)
-			{
-				return null;
-			}
-			return result;
-
+			return ProcessQueue(constraints, q, dimensions);
 		}
 	}
 }

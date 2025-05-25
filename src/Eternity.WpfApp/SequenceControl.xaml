@@ -27,7 +27,7 @@
 					FontWeight="Bold"
 					TextAlignment="Right"
 					HorizontalAlignment="Stretch"
-					Text="{Binding ValueAsHex}" 
+					Text="{Binding AsFraction}" 
 				>
 					<TextBlock.Foreground>
 						<SolidColorBrush Color="{Binding ForegroundColor}" />

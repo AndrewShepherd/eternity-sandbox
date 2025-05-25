@@ -2,106 +2,190 @@
 {
 	using System.Collections.Immutable;
 
-	public class PlacementStack
+	public record class StackEntry(
+		int PieceIndex,
+		int PossiblePieceCount, // the count of items that could go in that slot
+		Position Position, // The position that this stack entry represents
+		Placements? Placements,
+		IPositioner Positioner
+	);
+
+
+	public static class StackEntryExtensions
 	{
-		public record class StackEntry(int PieceIndex, Placements Placements, IPositioner Positioner);
+		public static int? ProgressForwards(int? startIndex, int count) =>
+			startIndex switch
+			{
+				int n when n >= count - 1 => null,
+				int n => n + 1,
+				_ => 0
+			};
 
-		public StackEntry?[] _stackEntries = new StackEntry?[256];
+		public static int? ProgressBackwards(int? startIndex, int count) =>
+			startIndex switch
+			{
+				int n when n > 0 => n - 1,
+				int n => null,
+				_ => count - 1
+			};
 
-		// Mutates the stack so that it gets as far as it can
-		// Returns the number of pieces it applied
-		// and the resulting Placements
-		// (Note that there may be more placements than asked for
-		// because squares which can only have one piece are automatically
-		// filled)
+		private enum ProgressionState
+		{
+			Initial,
+			AfterFirstSuccess,
+			AfterFirstFailure
+		};
 
-		private Placements? _initialPlacements;
-		public (int, Placements) ApplyPieceOrder(
-			IReadOnlyList<ImmutableArray<int>> pieceSides,
-			IEnumerable<int> sequence
+		public static ImmutableList<StackEntry> CreateInitialStack(
+			Func<int?, int, int?> progressIndex,
+			IReadOnlyList<ImmutableArray<int>> pieceSides
 		)
 		{
-			// Find the stack entry that matches this
-			var matchingStackEntryIndex = -1;
-			if (_initialPlacements == null)
+			Placements initialPlacements = Placements.CreateInitial(
+				pieceSides
+			);
+			IPositioner positioner = new DynamicPositionerAdjacentsOnly(initialPlacements.Dimensions);
+			// Push the first value
+			(var firstPosition, positioner) = positioner.GetNext(initialPlacements.Constraints);
+			var availablePieces = initialPlacements.Constraints.At(firstPosition).Pieces;
+			var pieceIndex = progressIndex(null, availablePieces.Count);
+			if (pieceIndex.HasValue)
 			{
-				_initialPlacements = Placements.CreateInitial(
-					pieceSides
+				Placements? attempt = PuzzleSolver.TryAddPiece(
+					initialPlacements,
+					firstPosition,
+					availablePieces.ElementAt(new Index(pieceIndex.Value))
+				);
+				if (attempt == null)
+				{
+					return ImmutableList<StackEntry>.Empty;
+				}
+				var newStackEntry = new StackEntry(
+					PieceIndex: pieceIndex.Value,
+					PossiblePieceCount: availablePieces.Count,
+					Position: firstPosition,
+					Placements: attempt,
+					Positioner: positioner
+				);
+				return ImmutableList<StackEntry>.Empty.Add(newStackEntry);
+			}
+			return ImmutableList<StackEntry>.Empty;
+		}
+
+		private static ImmutableList<StackEntry> ProgressToFirstSuccess(ImmutableList<StackEntry> stack, Func<int?, int, int?> progressIndex)
+		{
+			while(true)
+			{
+				if (stack.Count <2)
+				{
+					return stack;
+				}
+				var lastEntry = stack[stack.Count - 1];
+				var secondLastEntry = stack[stack.Count - 2];
+				if (secondLastEntry.Placements == null)
+				{
+					throw new Exception("Inexplicable state");
+				}
+				var constraints = secondLastEntry.Placements.Constraints;
+				var pieceIndex = progressIndex(lastEntry.PieceIndex, lastEntry.PossiblePieceCount);
+				if (!pieceIndex.HasValue)
+				{
+					stack = stack.RemoveAt(stack.Count - 1);
+					continue;
+				}
+				var availablePieces = constraints.At(lastEntry.Position).Pieces;
+				Placements? attempt = PuzzleSolver.TryAddPiece(
+					secondLastEntry.Placements,
+					lastEntry.Position,
+					availablePieces.ElementAt(new Index(pieceIndex.Value))
+				);
+				var stackEntry = new StackEntry(
+					PieceIndex: pieceIndex.Value,
+					PossiblePieceCount: lastEntry.PossiblePieceCount,
+					Position: lastEntry.Position,
+					Placements: attempt,
+					Positioner: lastEntry.Positioner
+				);
+				stack = stack.Replace(lastEntry, stackEntry);
+				if (attempt != null)
+				{
+					return stack;
+				}
+			}
+		}
+
+		private static ImmutableList<StackEntry> ExtendThroughDefaultSelection(ImmutableList<StackEntry> stack, Func<int?, int, int?> progressIndex)
+		{
+			while (true)
+			{
+				var lastEntry = stack[stack.Count - 1];
+				if (lastEntry.Placements == null)
+				{
+					return stack;
+				}
+				if (stack.Count > lastEntry.Placements.PieceSides.Count)
+				{
+					throw new Exception("Error: Placed more items than possible on the stack");
+				}
+				if (stack.Count == lastEntry.Placements.PieceSides.Count)
+				{
+					return stack;
+				}
+				var (position, positioner) = lastEntry.Positioner.GetNext(
+					lastEntry.Placements.Constraints
+				);
+				if (position == lastEntry.Position)
+				{
+					throw new Exception("Returned a position that was already used");
+				}
+				// Sanity check
+				if ((lastEntry.Positioner as DynamicPositionerAdjacentsOnly)!._returnedAlready.Contains(position))
+				{
+					throw new Exception("Positioner returned a position it had already returned");
+				}
+				if ((positioner as DynamicPositionerAdjacentsOnly)!._adjacentPositions.Contains(position))
+				{
+					throw new Exception("Returned positioner has current position in its adjacent positions");
+				}
+				var availablePieces = lastEntry.Placements.Constraints.At(position).Pieces;
+				var pieceIndex = progressIndex(null, availablePieces.Count);
+				if (!pieceIndex.HasValue)
+				{
+					return stack;
+				}
+				Placements? attempt = PuzzleSolver.TryAddPiece(
+					lastEntry.Placements,
+					position,
+					availablePieces.ElementAt(new Index(pieceIndex.Value))
+				);
+				stack = stack.Add(
+					new(
+						PieceIndex: pieceIndex.Value,
+						PossiblePieceCount: availablePieces.Count,
+						Position: position,
+						Placements: attempt,
+						Positioner: positioner
+					)
 				);
 			}
-			Placements matchingPlacements = _initialPlacements;
-			IPositioner positioner = new DynamicPositionerAdjacentsOnly(_initialPlacements.Dimensions);
+		}
 
-			var pieceIndexEnumerator = sequence.GetEnumerator();
-			int i = 0;
-			for (i = 0; i < this._stackEntries.Length; ++i)
+		public static ImmutableList<StackEntry> Progress(
+			this ImmutableList<StackEntry> stack,
+			Func<int?, int, int?> progressIndex,
+			IReadOnlyList<ImmutableArray<int>> pieceSides
+		)
+		{
+			if (stack.Count == 0)
 			{
-				pieceIndexEnumerator.MoveNext();
-				var thisEntry = this._stackEntries[i];
-				if (thisEntry == null)
-				{
-					break;
-				}
-				if (thisEntry.PieceIndex != pieceIndexEnumerator.Current)
-				{
-					for (int j = i; j < this._stackEntries.Length; ++j)
-					{
-						if (this._stackEntries[j] == null)
-						{
-							break;
-						}
-						this._stackEntries[j] = null;
-					}
-					break;
-				}
-				matchingStackEntryIndex = i;
-				matchingPlacements = thisEntry.Placements;
-				positioner = thisEntry.Positioner;
+				stack = CreateInitialStack(progressIndex, pieceSides);
 			}
-
-			for (; true; ++i)
+			else if (stack.Count >= 2)
 			{
-				// This is the bit where the positioner
-				// dynamically chooses the position
-				var (nextPosition, newPositioner) = positioner.GetNext(matchingPlacements.Constraints);
-				Placements? newPlacements = null;
-				int pieceIndex = pieceIndexEnumerator.Current;
-				var possiblePieces = matchingPlacements.Constraints.At(nextPosition).Pieces;
-				if (pieceIndex < possiblePieces.Count)
-				{
-					var pieceId = possiblePieces.OrderBy(p => p).ElementAt(pieceIndex);
-					newPlacements = PuzzleSolver.TryAddPiece(
-						matchingPlacements,
-						nextPosition,
-						pieceId
-					);
-				}
-				if (newPlacements == null)
-				{
-					if (i == 0)
-					{
-						return (0, _initialPlacements);
-					}
-					var lastPlacement = this._stackEntries[i - 1]?.Placements;
-					if (lastPlacement == null)
-					{
-						throw new Exception("Inexplicable null entry in the stack");
-					}
-					return (i, lastPlacement);
-				}
-				this._stackEntries[i] = new StackEntry(
-					pieceIndexEnumerator.Current, 
-					newPlacements,
-					newPositioner
-				);
-				matchingPlacements = newPlacements;
-				positioner = newPositioner;
-				if (!pieceIndexEnumerator.MoveNext())
-				{
-					break;
-				}
+				stack = ProgressToFirstSuccess(stack, progressIndex);
 			}
-			return (i, this._stackEntries[pieceSides.Count - 1]!.Placements);
+			stack = ExtendThroughDefaultSelection(stack, progressIndex);
+			return stack;
 		}
 	}
 }

@@ -64,8 +64,8 @@
 
 	public class DynamicPositionerAdjacentsOnly(Dimensions dimensions) : IPositioner
 	{
-		private ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
-		private ImmutableHashSet<Position> _adjacentPositions = ImmutableHashSet<Position>.Empty;
+		internal ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
+		internal ImmutableSortedSet<Position> _adjacentPositions = ImmutableSortedSet<Position>.Empty;
 
 		(Position, IPositioner) IPositioner.GetNext(Constraints constraints)
 		{

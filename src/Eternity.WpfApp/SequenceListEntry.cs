@@ -5,6 +5,10 @@
 
 	public class SequenceListEntry : INotifyPropertyChanged
 	{
+		public SequenceListEntry(StackEntry? stackEntry)
+		{
+			_value = stackEntry;
+		}
 		private PropertyChangedEventHandler? _propertyChanged;
 		event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
 		{
@@ -12,8 +16,8 @@
 			remove => _propertyChanged -= value;
 		}
 
-		private int _value;
-		public int Value
+		private StackEntry? _value;
+		public StackEntry? Value
 		{
 			get => _value;
 			set
@@ -22,7 +26,7 @@
 				{
 					_value = value;
 					_propertyChanged?.Invoke(this, new(nameof(Value)));
-					_propertyChanged?.Invoke(this, new(nameof(ValueAsHex)));
+					_propertyChanged?.Invoke(this, new(nameof(AsFraction)));
 				}
 			}
 		}
@@ -41,16 +45,9 @@
 			}
 		}
 
-		public string ValueAsHex => AsTwoDigitHex(_value);
-
-		private static string AsTwoDigitHex(int n)
-		{
-			var unpaddedHex = $"{n:X}";
-			return unpaddedHex.Length == 1 ? $"0{unpaddedHex}" : unpaddedHex;
-		}
-		public static string SequenceToString(IEnumerable<int> sequence) =>
-			string.Join(' ', sequence.Select(AsTwoDigitHex));
-
-		public override string ToString() => AsTwoDigitHex(_value);
+		public string AsFraction => 
+			this.Value == null
+				? "_/_" 
+				: $"{this.Value.PieceIndex}/{this.Value.PossiblePieceCount}";
 	}
 }

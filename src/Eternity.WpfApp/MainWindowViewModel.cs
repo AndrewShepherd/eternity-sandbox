@@ -11,6 +11,7 @@
 
 
 	using static Eternity.Sequence;
+	using System.Numerics;
 
 	internal abstract class RunningState();
 
@@ -44,23 +45,23 @@
 
 		public Placements? Placements
 		{
-			get => _placements.Value;
-			set
-			{
-				if(_placements.Value != value)
-				{
-					_placements.OnNext(value);
-				}
-			}
+			get => this._solutionState?._placementStack.Where(p => p.Placements != null).LastOrDefault()?.Placements;
 		}
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(
-			() => this.SetSequence(_sequenceSpecs.GenerateRandomSequence()),
+			() => throw new NotImplementedException(),
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
 		public ICommand ResetSequenceCommand => new DelegateCommand(
-			() => this.SetSequence(_sequenceSpecs.GenerateFirst()),
+			() =>
+			{
+				this._solutionState!._placementStack = StackEntryExtensions.CreateInitialStack(
+					StackEntryExtensions.ProgressForwards,
+					this._solutionState._pieceSides
+				);
+				this._stackEntries.OnNext(_solutionState._placementStack);
+			},
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
 
@@ -94,58 +95,54 @@
 
 		public bool CanStop => _state is Running;
 
-
-		void Step(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
+		void UpdateStack(
+			Func<
+				ImmutableList<StackEntry>, 
+				IReadOnlyList<ImmutableArray<int>>,
+				ImmutableList<StackEntry>
+			> update)
 		{
 			if (_solutionState == null)
 			{
 				return;
 			}
-			var initialPlacements = this._placements.Value;
-			var currentSequence = _sequence.Value;
-			while (true)
-			{
-				int badIndex = _solutionState!.BadSequenceIndex;
-				currentSequence = transform(currentSequence, badIndex);
-				var placements = this._solutionState.SetSequence(currentSequence);
-				if (!placements.Equals(initialPlacements))
-				{
-					this._sequence.OnNext(currentSequence);
-					this._placements.OnNext(placements);
-					break;
-				}
-			}
+			_solutionState._placementStack = update(_solutionState._placementStack, _solutionState._pieceSides);
 		}
 
-		void StepForward() => Step(_sequenceSpecs.Increment);
+		void Step(Func<int?, int, int?> progressMethod)
+		{
+			if (_solutionState == null)
+			{
+				return;
+			}
+			_solutionState._placementStack = _solutionState._placementStack.Progress(
+				progressMethod,
+				_solutionState._pieceSides
+			);
+			this._stackEntries.OnNext(_solutionState._placementStack);
+		}
 
-		void StepBackwards() => Step(_sequenceSpecs.Decrement);
+		void StepForward() => Step(StackEntryExtensions.ProgressForwards);
+
+		void StepBackwards() => Step(StackEntryExtensions.ProgressBackwards);
 
 		private void LoopUntilAnswerFound(
 			CancellationToken cancellationToken,
-			Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform
+			Func<int?, int, int?> transform
 		)
 		{
-			var currentSequence = _sequence.Value;
-			var currentPlacements = this._placements.Value;
+			if (_solutionState == null)
+			{
+				return;
+			}
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				var badIndex = _solutionState!.BadSequenceIndex;
-				if (badIndex >= currentSequence.Count - 1)
+				if (_solutionState._placementStack.Count == _solutionState._pieceSides.Count)
 				{
 					// This is a success!
 					break;
 				}
-				currentSequence = transform(currentSequence, badIndex);
-				var placements = _solutionState.SetSequence(currentSequence);
-
-				_sequence.OnNext(currentSequence);
-
-				if (placements != currentPlacements)
-				{
-					_placements.OnNext(placements);
-					currentPlacements = placements;
-				}
+				Step(transform);
 			}
 			this.State = new Stopped();
 		}
@@ -163,7 +160,7 @@
 			}
 		}
 
-		private void Go(Func<IReadOnlyList<int>, int, IReadOnlyList<int>> transform)
+		private void Go(Func<int?, int, int?> transform)
 		{
 			if (this._state is Stopped)
 			{
@@ -182,12 +179,12 @@
 
 		public void Start()
 		{
-			Go(_sequenceSpecs.Increment);
+			Go(StackEntryExtensions.ProgressForwards);
 		}
 
 		public void GoBackwards()
 		{
-			Go(_sequenceSpecs.Decrement);
+			Go(StackEntryExtensions.ProgressBackwards);
 		}
 
 		public void Stop()
@@ -199,22 +196,14 @@
 			this.State = new Stopped();
 		}
 
-		private void SetSequence(IReadOnlyList<int> sequence)
-		{
-			if (_solutionState == null)
-			{
-				return;
-			}
-			var placements = _solutionState.SetSequence(sequence);
-			this._sequence.OnNext(sequence);
-			this._placements.OnNext(placements);
-		}
-
-
 		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(
 			new SequenceSpecs(256).GenerateFirst()
 		);
-		BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
+		BehaviorSubject<IReadOnlyList<StackEntry>> _stackEntries = new BehaviorSubject<IReadOnlyList<StackEntry>>([]);
+		//BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
+
+		public IReadOnlyList<StackEntry> StackEntries => this._solutionState?._placementStack ?? [];
+
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
@@ -232,10 +221,10 @@
 			}
 		}
 
-		
-
 		private int _placementCount = 0;
 		public int PlacementCount => _placementCount;
+
+		public string ProgressText { get; set; }
 
 		private SolutionState? _solutionState = null;
 
@@ -243,13 +232,16 @@
 
 		private SequenceSpecs _sequenceSpecs = new SequenceSpecs(256);
 
+
 		public void SetPieceSides(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
 			_sequenceSpecs = new SequenceSpecs(pieceSides.Count);
 			_solutionState = new SolutionState(pieceSides);
-			var placements = Placements.CreateInitial(pieceSides);
-			this._placements.OnNext(placements);
-			this.SetSequence(_sequenceSpecs.GenerateFirst());
+			_solutionState._placementStack = _solutionState._placementStack.Progress(
+				StackEntryExtensions.ProgressForwards,
+				_solutionState._pieceSides
+			);
+			this._stackEntries.OnNext(_solutionState._placementStack);
 		}
 
 		private async void SetInitialData()
@@ -273,7 +265,33 @@
 			).Where(p => p.EventArgs.PropertyName == nameof(SelectedSequenceIndex))
 			.Select(p => this._selectedSequenceIndex);
 
-			var placementsObservable = _placements.Sample(TimeSpan.FromSeconds(0.5));
+
+			var stackEntriesObservable = _stackEntries.Sample(TimeSpan.FromSeconds(0.5));
+
+			var placementsObservable = stackEntriesObservable.Select(
+				stackEntries => stackEntries.LastOrDefault(se => se.Placements != null)?.Placements
+			);
+
+			var scoreObservable = stackEntriesObservable.Select(
+				stackEntries => CalculateStackProgress(stackEntries)
+			).Select(
+				r => $"{r.division:N2} ({r.stepsTaken:N0}/{r.totalSteps:N0})"
+			);
+
+			scoreObservable.Subscribe(
+				s =>
+				{
+					this.ProgressText = s;
+					this._propChangedNotifier.PropertyChanged(nameof(this.ProgressText));
+				}
+			);
+
+			stackEntriesObservable.Subscribe(
+				se =>
+				{
+					this._propChangedNotifier.PropertyChanged(nameof(this.StackEntries));
+				}
+			);
 
 
 			placementsObservable
@@ -303,6 +321,24 @@
 						this._propChangedNotifier.PropertyChanged(nameof(Sequence));
 					}
 				);
+		}
+
+		record StackProgress(
+			BigInteger stepsTaken,
+			BigInteger totalSteps,
+			double? division
+		);
+
+		private static StackProgress CalculateStackProgress(IReadOnlyList<StackEntry> stackEntries)
+		{
+			BigInteger stepsTaken = 0;
+			BigInteger totalSteps = 1;
+			foreach(var stackEntry in stackEntries)
+			{
+				totalSteps *= stackEntry.PossiblePieceCount;
+				stepsTaken = stepsTaken * stackEntry.PossiblePieceCount + stackEntry.PieceIndex;
+			}
+			return new(stepsTaken, totalSteps, stepsTaken == 0 ? default : (double)totalSteps/(double)stepsTaken);
 		}
 
 		internal void OnClosed()

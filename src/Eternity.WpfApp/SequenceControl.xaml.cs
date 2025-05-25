@@ -48,10 +48,10 @@ namespace Eternity.WpfApp
 			}
 		}
 
-		public IReadOnlyList<int> Sequence
+		public IReadOnlyList<StackEntry> StackEntries
 		{
-			get => (IReadOnlyList<int>)GetValue(SequenceProperty);
-			set => SetValue(SequenceProperty, value);
+			get => (IReadOnlyList<StackEntry>)GetValue(StackEntriesProperty);
+			set => SetValue(StackEntriesProperty, value);
 		}
 
 		private SequenceControlViewModel? SequenceControlViewModel =>
@@ -63,14 +63,14 @@ namespace Eternity.WpfApp
 			set => SetValue(SelectedSequenceIndexProperty, value);
 		}
 
-		public static readonly DependencyProperty SequenceProperty = DependencyProperty.Register(
-			nameof(SequenceControl.Sequence),
-			typeof(IReadOnlyList<int>),
+		public static readonly DependencyProperty StackEntriesProperty = DependencyProperty.Register(
+			nameof(SequenceControl.StackEntries),
+			typeof(IReadOnlyList<StackEntry>),
 			typeof(SequenceControl),
 			new PropertyMetadata
 			{
-				DefaultValue = new SequenceSpecs(256).GenerateFirst(),
-				PropertyChangedCallback = SequenceChangedCallback
+				DefaultValue = new StackEntry[0],
+				PropertyChangedCallback = StackEntriesChangedCallBack
 			}
 		);
 
@@ -85,13 +85,13 @@ namespace Eternity.WpfApp
 			}
 		);
 
-		private static void SequenceChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		private static void StackEntriesChangedCallBack(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			SequenceControl ctrl = (SequenceControl)d;
 			var viewModel = ctrl.SequenceControlViewModel;
 			if (viewModel != null)
 			{
-				viewModel.Sequence = (IReadOnlyList<int>)e.NewValue;
+				viewModel.StackEntries = (IReadOnlyList<StackEntry>)e.NewValue;
 			}
 		}
 

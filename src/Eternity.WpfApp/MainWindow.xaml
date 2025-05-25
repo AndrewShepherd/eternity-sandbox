@@ -73,7 +73,7 @@
 			</StackPanel>
 			
 			<local:SequenceControl
-				Sequence="{Binding Sequence}" 
+				StackEntries="{Binding StackEntries}" 
 				SelectedSequenceIndex="{Binding Path=SelectedSequenceIndex,Mode=TwoWay}" 
 			/>
 
@@ -84,6 +84,10 @@
 			<StackPanel Orientation="Horizontal">
 				<TextBlock>Placements: </TextBlock>
 				<TextBlock Text="{Binding PlacementCount}" />
+			</StackPanel>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock>Progress:</TextBlock>
+				<TextBlock Text="{Binding ProgressText}" />
 			</StackPanel>
 
 		</StackPanel>
