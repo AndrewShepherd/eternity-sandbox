@@ -10,7 +10,7 @@ namespace Eternity.WpfApp
 {
 	internal sealed class SolutionState
 	{
-		public ImmutableList<StackEntry> _placementStack = ImmutableList<StackEntry>.Empty;
+		public TreeNode _treeNode = UnexploredTreeNode.Instance;
 
 		public readonly IReadOnlyList<ImmutableArray<int>> _pieceSides;
 

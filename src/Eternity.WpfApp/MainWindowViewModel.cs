@@ -45,7 +45,14 @@
 
 		public Placements? Placements
 		{
-			get => this._solutionState?._placementStack.Where(p => p.Placements != null).LastOrDefault()?.Placements;
+			get
+			{
+				return (this._solutionState?._treeNode) switch
+				{
+					StackEntryTreeNode seTreeNode => StackEntryExtensions.GetStackEntries(seTreeNode).Last().StackEntry.Placements,
+					_ => default
+				};
+			}
 		}
 
 		public ICommand GenerateRandomCommand => new DelegateCommand(
@@ -56,11 +63,11 @@
 		public ICommand ResetSequenceCommand => new DelegateCommand(
 			() =>
 			{
-				this._solutionState!._placementStack = StackEntryExtensions.CreateInitialStack(
+				this._solutionState!._treeNode = StackEntryExtensions.CreateInitialStack(
 					StackEntryExtensions.ProgressForwards,
 					this._solutionState._pieceSides
 				);
-				this._stackEntries.OnNext(_solutionState._placementStack);
+				this._rootTreeNode.OnNext(_solutionState!._treeNode);
 			},
 			() => this.State is Stopped
 		).ObservesProperty(() => this.State);
@@ -95,31 +102,17 @@
 
 		public bool CanStop => _state is Running;
 
-		void UpdateStack(
-			Func<
-				ImmutableList<StackEntry>, 
-				IReadOnlyList<ImmutableArray<int>>,
-				ImmutableList<StackEntry>
-			> update)
-		{
-			if (_solutionState == null)
-			{
-				return;
-			}
-			_solutionState._placementStack = update(_solutionState._placementStack, _solutionState._pieceSides);
-		}
-
 		void Step(Func<int?, int, int?> progressMethod)
 		{
 			if (_solutionState == null)
 			{
 				return;
 			}
-			_solutionState._placementStack = _solutionState._placementStack.Progress(
+			_solutionState._treeNode = _solutionState._treeNode.Progress(
 				progressMethod,
 				_solutionState._pieceSides
 			);
-			this._stackEntries.OnNext(_solutionState._placementStack);
+			this._rootTreeNode.OnNext(_solutionState._treeNode);
 		}
 
 		void StepForward() => Step(StackEntryExtensions.ProgressForwards);
@@ -137,7 +130,7 @@
 			}
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				if (_solutionState._placementStack.Count == _solutionState._pieceSides.Count)
+				if (false) // _solutionState._placementStack.Count == _solutionState._pieceSides.Count)
 				{
 					// This is a success!
 					break;
@@ -199,11 +192,20 @@
 		BehaviorSubject<IReadOnlyList<int>> _sequence = new BehaviorSubject<IReadOnlyList<int>>(
 			new SequenceSpecs(256).GenerateFirst()
 		);
-		BehaviorSubject<IReadOnlyList<StackEntry>> _stackEntries = new BehaviorSubject<IReadOnlyList<StackEntry>>([]);
-		//BehaviorSubject<Placements?> _placements = new BehaviorSubject<Placements?>(null);
+		BehaviorSubject<TreeNode> _rootTreeNode = new BehaviorSubject<TreeNode>(new FullyExploredTreeNode { NodesExplored = 0 } );
 
-		public IReadOnlyList<StackEntry> StackEntries => this._solutionState?._placementStack ?? [];
 
+		public IReadOnlyList<StackEntry> StackEntries
+		{
+			get
+			{
+				return _solutionState?._treeNode switch
+				{
+					StackEntryTreeNode tn => StackEntryExtensions.GetStackEntries(tn).Select(e => e.StackEntry).ToList(),
+					_ => []
+				};
+			}
+		}
 
 		Task<PuzzleEnvironment> _generatePuzzleEnvironmentTask = PuzzleEnvironment.Generate();
 
@@ -237,11 +239,11 @@
 		{
 			_sequenceSpecs = new SequenceSpecs(pieceSides.Count);
 			_solutionState = new SolutionState(pieceSides);
-			_solutionState._placementStack = _solutionState._placementStack.Progress(
+			_solutionState._treeNode = _solutionState._treeNode.Progress(
 				StackEntryExtensions.ProgressForwards,
 				_solutionState._pieceSides
 			);
-			this._stackEntries.OnNext(_solutionState._placementStack);
+			this._rootTreeNode.OnNext(_solutionState._treeNode);
 		}
 
 		private async void SetInitialData()
@@ -266,14 +268,14 @@
 			.Select(p => this._selectedSequenceIndex);
 
 
-			var stackEntriesObservable = _stackEntries.Sample(TimeSpan.FromSeconds(0.5));
+			var rootTreeNodeObservable = _rootTreeNode.Sample(TimeSpan.FromSeconds(0.5));
 
-			var placementsObservable = stackEntriesObservable.Select(
-				stackEntries => stackEntries.LastOrDefault(se => se.Placements != null)?.Placements
+			var placementsObservable = rootTreeNodeObservable.Select(
+				rootTreeNode => this.StackEntries.LastOrDefault(se => se.Placements != null)?.Placements
 			);
 
-			var scoreObservable = stackEntriesObservable.Select(
-				stackEntries => CalculateStackProgress(stackEntries)
+			var scoreObservable = rootTreeNodeObservable.Select(
+				CalculateStackProgress
 			).Select(
 				r => $"{r.division:N2} ({r.stepsTaken:N0}/{r.totalSteps:N0})"
 			);
@@ -286,7 +288,7 @@
 				}
 			);
 
-			stackEntriesObservable.Subscribe(
+			rootTreeNodeObservable.Subscribe(
 				se =>
 				{
 					this._propChangedNotifier.PropertyChanged(nameof(this.StackEntries));
@@ -329,17 +331,16 @@
 			double? division
 		);
 
-		private static StackProgress CalculateStackProgress(IReadOnlyList<StackEntry> stackEntries)
-		{
-			BigInteger stepsTaken = 0;
-			BigInteger totalSteps = 1;
-			foreach(var stackEntry in stackEntries)
-			{
-				totalSteps *= stackEntry.PossiblePieceCount;
-				stepsTaken = stepsTaken * stackEntry.PossiblePieceCount + stackEntry.PieceIndex;
-			}
-			return new(stepsTaken, totalSteps, stepsTaken == 0 ? default : (double)totalSteps/(double)stepsTaken);
-		}
+		private static StackProgress CalculateStackProgress(TreeNode treeNode) =>
+			new StackProgress(
+				treeNode.NodesExplored,
+				treeNode.TotalNodesEstimate ?? 0,
+				treeNode.NodesExplored switch 
+				{ 
+					BigInteger bi when (bi == 0) => default,
+					BigInteger bi => (double)((treeNode.TotalNodesEstimate ?? 0)/treeNode.NodesExplored)
+				}
+			);
 
 		internal void OnClosed()
 		{
