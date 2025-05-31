@@ -57,9 +57,14 @@
 			}
 		}
 
-		public TreeNode Replace(TreeNode childNode, TreeNode newNode)
+		public TreeNode ReplaceAt(int index, TreeNode newNode)
 		{
-			var newChildren = ChildNodes.Replace(childNode, newNode);
+			var existing = ChildNodes.ElementAt(index);
+			if (object.ReferenceEquals(existing, newNode))
+			{
+				return this;
+			}
+			var newChildren = ChildNodes.SetItem(index, newNode);
 			// Now have to work out: 
 			//   What kind of tree node should this be(FullyExplored, StackEntry)
 			//   How many nodes explored are there

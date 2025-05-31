@@ -98,14 +98,18 @@
 			}
 		}
 
-		private static TreeNode UpdateLastNode(List<StackEntryTreeNode> l, Func<StackEntryTreeNode, TreeNode> transform)
+		private static TreeNode UpdateLastNode(
+			List<StackEntryTreeNode> l,
+			Func<StackEntryTreeNode, TreeNode> transform
+		)
 		{
 			var lastNode = l.Last();
 			l.RemoveAt(l.Count - 1);
 			var transformedNode = transform(lastNode);
 			if (l.Count > 0)
 			{
-				return UpdateLastNode(l, n => n.Replace(lastNode, transformedNode));
+				var index = l.Last().ChildNodes.IndexOf(lastNode);
+				return UpdateLastNode(l, n => n.ReplaceAt(index, transformedNode));
 			}
 			else
 			{
@@ -151,7 +155,7 @@
 							newChild = stackEntry.AsTreeNode();
 						}
 						// Not exactly correct here. We are returning whether it was successful or not
-						return UpdateLastNode(stack, e => e.Replace(childNode, newChild));
+						return UpdateLastNode(stack, e => e.ReplaceAt(index.Value, newChild));
 					}
 				}
 				throw new Exception("StackEntryTreeNode must have at least one unexplored");
