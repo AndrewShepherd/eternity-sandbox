@@ -38,6 +38,10 @@
 
 		public static StackEntryTreeNode AsTreeNode(this StackEntry newStackEntry)
 		{
+			if (newStackEntry.Placements!.Values.Count == newStackEntry.Placements.PieceSides.Count)
+			{
+				throw new Exception("TODO: Handle solving the problem");
+			}	
 			(var nextPosition, _) = newStackEntry.Positioner.GetNext(newStackEntry.Placements!.Constraints);
 			var possiblePieces = newStackEntry.Placements!.Constraints.At(nextPosition).Pieces;
 			return new StackEntryTreeNode
@@ -117,6 +121,34 @@
 			}
 		}
 
+		private static TreeNode GenerateChildNode(StackEntryTreeNode setn, int index)
+		{
+			var thisConstraints = setn.StackEntry.Placements!.Constraints;
+			(var nextPosition, var nextPositioner) = setn.StackEntry.Positioner.GetNext(thisConstraints);
+			var pieces = thisConstraints.At(nextPosition).Pieces;
+			var piece = pieces.ElementAt(index);
+			Placements? attempt = PuzzleSolver.TryAddPiece(
+				setn.StackEntry.Placements,
+				nextPosition,
+				piece
+			);
+			if (attempt == null)
+			{
+				return UnsuccessfulPlacementTreeNode.Instance;
+			}
+			else
+			{
+				var stackEntry = new StackEntry(
+					index,
+					setn.ChildNodes.Count,
+					nextPosition,
+					attempt,
+					nextPositioner
+				);
+				return stackEntry.AsTreeNode();
+			}
+		}
+
 		private record class ProgressToFirstSuccessResult(TreeNode treeNode, bool foundSuccess); 
 		private static ProgressToFirstSuccessResult ProgressToFirstSuccess(TreeNode treeNode, Func<int?, int, int?> progressIndex)
 		{
@@ -135,33 +167,9 @@
 					TreeNode childNode = setn.ChildNodes[index.Value];
 					if (childNode is UnexploredTreeNode)
 					{
-						// Create a new node
-						var piece = pieces.ElementAt(index.Value);
-						Placements? attempt = PuzzleSolver.TryAddPiece(
-							setn.StackEntry.Placements,
-							nextPosition,
-							piece
-						);
-						TreeNode? newChild;
-						bool success = false;
-						if (attempt == null)
-						{
-							newChild = UnsuccessfulPlacementTreeNode.Instance;
-						}
-						else
-						{
-							var stackEntry = new StackEntry(
-								index.Value,
-								childNodeCount,
-								nextPosition,
-								attempt,
-								nextPositioner
-							);
-							newChild = stackEntry.AsTreeNode();
-							success = true;
-						}
+						var newChild = GenerateChildNode(setn, index.Value);
 						var newSetn = setn.ReplaceAt(index.Value, newChild);
-						if (success)
+						if (newChild is StackEntryTreeNode)
 						{
 							return new(newSetn, true);
 						}
@@ -169,10 +177,7 @@
 						{
 							return ProgressToFirstSuccess(newSetn, progressIndex);
 						}
-
-
-
-						}
+					}
 					else if (childNode is StackEntryTreeNode childSetn)
 					{
 						(var newChildNode, bool success) = ProgressToFirstSuccess(childNode, progressIndex);
@@ -195,60 +200,37 @@
 			}
 		}
 
-		private static ImmutableList<StackEntry> ExtendThroughDefaultSelection(ImmutableList<StackEntry> stack, Func<int?, int, int?> progressIndex)
+		private static TreeNode ExtendThroughDefaultSelection(
+			TreeNode treeNode,
+			Func<int?, int, int?> progressIndex
+		)
 		{
-			while (true)
+			if (treeNode is StackEntryTreeNode setn)
 			{
-				var lastEntry = stack[stack.Count - 1];
-				if (lastEntry.Placements == null)
+				var childNodeCount = setn.ChildNodes.Count;
+				for (
+					int? index = progressIndex(null, childNodeCount);
+					index != null;
+					index = progressIndex(index, childNodeCount)
+				)
 				{
-					return stack;
+					TreeNode childNode = setn.ChildNodes[index.Value];
+					if (childNode is UnexploredTreeNode)
+					{
+						childNode = GenerateChildNode(setn, index.Value);
+						childNode = ExtendThroughDefaultSelection(childNode, progressIndex);
+						return setn.ReplaceAt(index.Value, childNode);
+					}
+					if (childNode is StackEntryTreeNode)
+					{
+						return setn.ReplaceAt(
+							index.Value,
+							ExtendThroughDefaultSelection(childNode, progressIndex)
+						);
+					}
 				}
-				if (stack.Count > lastEntry.Placements.PieceSides.Count)
-				{
-					throw new Exception("Error: Placed more items than possible on the stack");
-				}
-				if (stack.Count == lastEntry.Placements.PieceSides.Count)
-				{
-					return stack;
-				}
-				var (position, positioner) = lastEntry.Positioner.GetNext(
-					lastEntry.Placements.Constraints
-				);
-				if (position == lastEntry.Position)
-				{
-					throw new Exception("Returned a position that was already used");
-				}
-				// Sanity check
-				if ((lastEntry.Positioner as DynamicPositionerAdjacentsOnly)!._returnedAlready.Contains(position))
-				{
-					throw new Exception("Positioner returned a position it had already returned");
-				}
-				if ((positioner as DynamicPositionerAdjacentsOnly)!._adjacentPositions.Contains(position))
-				{
-					throw new Exception("Returned positioner has current position in its adjacent positions");
-				}
-				var availablePieces = lastEntry.Placements.Constraints.At(position).Pieces;
-				var pieceIndex = progressIndex(null, availablePieces.Count);
-				if (!pieceIndex.HasValue)
-				{
-					return stack;
-				}
-				Placements? attempt = PuzzleSolver.TryAddPiece(
-					lastEntry.Placements,
-					position,
-					availablePieces.ElementAt(new Index(pieceIndex.Value))
-				);
-				stack = stack.Add(
-					new(
-						PieceIndex: pieceIndex.Value,
-						PossiblePieceCount: availablePieces.Count,
-						Position: position,
-						Placements: attempt,
-						Positioner: positioner
-					)
-				);
 			}
+			return treeNode;
 		}
 
 		public static TreeNode Progress(
@@ -265,7 +247,7 @@
 			{
 				(treeNode, bool success) = ProgressToFirstSuccess(treeNode, progressIndex);
 			}
-			//treeNode = ExtendThroughDefaultSelection(treeNode, progressIndex);
+			treeNode = ExtendThroughDefaultSelection(treeNode, progressIndex);
 			return treeNode;
 		}
 	}
