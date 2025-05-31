@@ -81,7 +81,7 @@ namespace Eternity.WpfApp
 					{
 						_valuesAndDates = _valuesAndDates.Concat(newValues).ToArray();
 					}
-					var firstPlacements = _stackEntries[0].Placements;
+					var firstPlacements = _stackEntries.FirstOrDefault()?.Placements;
 					int expectedCount = 0;
 					if (firstPlacements != null)
 					{

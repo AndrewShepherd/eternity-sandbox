@@ -7,11 +7,15 @@
 	{
 		BigInteger NodesExplored { get; }
 		BigInteger? TotalNodesEstimate { get; }
+
+		IReadOnlyList<Placements> Solutions { get; }
 	}
 
 	public class FullyExploredTreeNode : TreeNode
 	{
-		public BigInteger NodesExplored { get; set; }
+		public BigInteger NodesExplored { get; init; }
+
+		public IReadOnlyList<Placements> Solutions { get; init; } = [];
 
 		public BigInteger? TotalNodesEstimate => NodesExplored;
 	}
@@ -21,6 +25,8 @@
 		public BigInteger NodesExplored => 0;
 		public BigInteger? TotalNodesEstimate => 0;
 
+		public IReadOnlyList<Placements> Solutions => [];
+
 		public static readonly TreeNode Instance = new UnsuccessfulPlacementTreeNode();
 	}
 
@@ -28,6 +34,8 @@
 	{
 		public BigInteger NodesExplored => 0;
 		public BigInteger? TotalNodesEstimate => null;
+
+		public IReadOnlyList<Placements> Solutions => [];
 
 		public static readonly TreeNode Instance = new UnexploredTreeNode();
 	}
@@ -40,6 +48,8 @@
 		public BigInteger? TotalNodesEstimate { get; init; } = null;
 
 		public required StackEntry StackEntry { get; init; }
+
+		public required IReadOnlyList<Placements> Solutions { get; init; }
 
 		private static BigInteger? CalculateEstimate(BigInteger? accumulated, int contributors, int total)
 		{
@@ -73,6 +83,7 @@
 			BigInteger accumulatedEstimate = 0;
 			BigInteger accumulatedNodesExplored = 0;
 			int estimateContributors = 0;
+			IEnumerable<Placements> solutions = Enumerable.Empty<Placements>();
 			foreach(var child in newChildren)
 			{
 				hasAtLeastOneStillToBeExplored = hasAtLeastOneStillToBeExplored || (child is StackEntryTreeNode or UnexploredTreeNode);
@@ -83,6 +94,7 @@
 					estimateContributors += 1;
 				}
 				accumulatedNodesExplored += child.NodesExplored;
+				solutions = solutions.Concat(child.Solutions);
 			}
 			var calculatedEstimate = CalculateEstimate(accumulatedEstimate, estimateContributors, newChildren.Count);
 			if (hasAtLeastOneStillToBeExplored)
@@ -92,7 +104,8 @@
 					ChildNodes = newChildren,
 					NodesExplored = accumulatedNodesExplored + 1,
 					StackEntry = this.StackEntry,
-					TotalNodesEstimate = calculatedEstimate + 1
+					TotalNodesEstimate = calculatedEstimate + 1,
+					Solutions = solutions.ToList()
 				};
 			}
 			else
@@ -100,6 +113,7 @@
 				return new FullyExploredTreeNode
 				{
 					NodesExplored = accumulatedNodesExplored + 1,
+					Solutions = solutions.ToList()
 				};
 			}
 		}

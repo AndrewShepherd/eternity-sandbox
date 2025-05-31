@@ -36,11 +36,15 @@
 			AfterFirstFailure
 		};
 
-		public static StackEntryTreeNode AsTreeNode(this StackEntry newStackEntry)
+		public static TreeNode AsTreeNode(this StackEntry newStackEntry)
 		{
 			if (newStackEntry.Placements!.Values.Count == newStackEntry.Placements.PieceSides.Count)
 			{
-				throw new Exception("TODO: Handle solving the problem");
+				return new FullyExploredTreeNode
+				{
+					NodesExplored = 1,
+					Solutions = [newStackEntry.Placements]
+				};
 			}	
 			(var nextPosition, _) = newStackEntry.Positioner.GetNext(newStackEntry.Placements!.Constraints);
 			var possiblePieces = newStackEntry.Placements!.Constraints.At(nextPosition).Pieces;
@@ -50,6 +54,7 @@
 				StackEntry = newStackEntry,
 				NodesExplored = 1,
 				TotalNodesEstimate = null,
+				Solutions = [],
 			};
 		}
 
