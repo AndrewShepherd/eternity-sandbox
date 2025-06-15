@@ -40,12 +40,25 @@
 				<MenuItem Header="E_xit" Command="{x:Static local:MainWindow.ExitCommand}" />
 			</MenuItem>
 		</Menu>
-		<local:BoardDisplay
-			Grid.Column="0"
-			Grid.Row="1"
-			SelectedSequenceIndex="{Binding SelectedSequenceIndex}"
-			Placements="{Binding Placements}"
-		/>
+		<Grid Grid.Row="1" Grid.Column="0">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+			<local:BoardSelector
+				x:Name="BoardSelector"
+				Grid.Row="0"
+				Solutions="{Binding SolutionsList}"
+				WorkingPlacements="{Binding Placements}"
+				/>
+			<local:BoardDisplay
+				Grid.Row="1"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Stretch"
+				SelectedSequenceIndex="{Binding SelectedSequenceIndex}"
+				Placements="{Binding ElementName=BoardSelector, Path=SelectedPlacements}"
+			/>
+		</Grid>
 		<StackPanel Orientation="Vertical" Grid.Column="1" Grid.Row="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
 				<Button Command="{Binding ResetSequenceCommand}">
@@ -77,18 +90,23 @@
 				SelectedSequenceIndex="{Binding Path=SelectedSequenceIndex,Mode=TwoWay}" 
 			/>
 
+			<Label>Solutions</Label>
+
 			<TextBlock Text="{Binding SelectedSequenceIndex}" 
 					   FontSize="16" FontFamily="Courier New"
 					   HorizontalAlignment="Center"
 					    />
 			<StackPanel Orientation="Horizontal">
-				<TextBlock>Placements: </TextBlock>
-				<TextBlock Text="{Binding PlacementCount}" />
-			</StackPanel>
-			<StackPanel Orientation="Horizontal">
 				<TextBlock>Progress:</TextBlock>
 				<TextBlock Text="{Binding ProgressText}" />
 			</StackPanel>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock>Placements: </TextBlock>
+				<TextBlock Text="{Binding PlacementCount}" />
+			</StackPanel>
+			<ListView Name="SolutionsList" ItemsSource="{Binding Path=Solutions}" />
+
+
 
 		</StackPanel>
 	</Grid>

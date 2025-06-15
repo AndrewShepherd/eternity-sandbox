@@ -55,6 +55,8 @@
 			}
 		}
 
+		public IReadOnlyList<Placements> Solutions => this._solutionState?._treeNode?.Solutions ?? [];
+
 		public ICommand GenerateRandomCommand => new DelegateCommand(
 			() => throw new NotImplementedException(),
 			() => this.State is Stopped
@@ -292,6 +294,7 @@
 				se =>
 				{
 					this._propChangedNotifier.PropertyChanged(nameof(this.StackEntries));
+					this._propChangedNotifier.PropertyChanged(nameof(this.Solutions));
 				}
 			);
 
