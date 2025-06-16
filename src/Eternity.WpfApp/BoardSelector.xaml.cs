@@ -1,21 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
-namespace Eternity.WpfApp
+﻿namespace Eternity.WpfApp
 {
+	using System.ComponentModel;
+	using System.Windows;
+	using System.Windows.Controls;
 	/// <summary>
 	/// Interaction logic for BoardSelector.xaml
 	/// </summary>
@@ -26,7 +13,7 @@ namespace Eternity.WpfApp
 			InitializeComponent();
 		}
 
-		PropertyChangedEventHandler _propertyChangedEventHandler;
+		PropertyChangedEventHandler? _propertyChangedEventHandler;
 		event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
 		{
 			add
@@ -44,6 +31,21 @@ namespace Eternity.WpfApp
 			}
 		}
 
+		protected override void OnInitialized(EventArgs e)
+		{
+			base.OnInitialized(e);
+			var vm = this.ViewModel;
+			vm.PropertyChanged += (s, a) =>
+			{
+				if (a.PropertyName == nameof(BoardSelectorViewModel.SelectedPlacements))
+				{
+					this._propertyChangedEventHandler?.Invoke(this, new(nameof(SelectedPlacements)));
+				}
+			};
+		}
+
+		private BoardSelectorViewModel? ViewModel => (this.Resources["BoardSelectorViewModel"] as BoardSelectorViewModel);
+
 		public static DependencyProperty SolutionsDependencyProperty = DependencyProperty.Register(
 			nameof(Solutions),
 			typeof(IReadOnlyList<Placements>),
@@ -56,42 +58,42 @@ namespace Eternity.WpfApp
 			typeof(BoardSelector),
 			new PropertyMetadata()
 			{
-				PropertyChangedCallback = (o, v) => (o as BoardSelector)!.WorkingPlacements = (Eternity.Placements)v.NewValue
+				PropertyChangedCallback = (o, v) =>
+				{
+					(o as BoardSelector)!.WorkingPlacements = (Eternity.Placements)v.NewValue;
+				}
 			}
 
 		);
-		public IReadOnlyList<Placements> Solutions
+		public IReadOnlyList<Placements>? Solutions
 		{
-			get;
-			set;
-		}
-
-		private Placements? _workingPlacements = null;
-		public Placements? WorkingPlacements
-		{
-			get => _workingPlacements;
+			get => this.ViewModel?.Solutions;
 			set
 			{
-				_workingPlacements = value;
-				this.SelectedPlacements = value;
-			}
-		}
-
-		private Placements? _selectedPlacements;
-		public Placements? SelectedPlacements
-		{
-			get => _selectedPlacements;
-			set
-			{
-				if (_selectedPlacements != value)
+				var vm = this.ViewModel;
+				if (vm != null)
 				{
-					_selectedPlacements = value;
-					_propertyChangedEventHandler?.Invoke(
-						this,
-						new PropertyChangedEventArgs(nameof(SelectedPlacements))
-					);
+					vm.Solutions = value;
 				}
 			}
+		}
+
+		public Placements? WorkingPlacements
+		{
+			get => this.ViewModel?.WorkingPlacements;
+			set
+			{
+				var vm = this.ViewModel;
+				if (vm != null)
+				{
+					vm.WorkingPlacements = value;
+				}
+			}
+		}
+
+		public Placements? SelectedPlacements
+		{
+			get => this.ViewModel?.SelectedPlacements;
 		}
 	}
 }

@@ -58,6 +58,9 @@
 				SelectedSequenceIndex="{Binding SelectedSequenceIndex}"
 				Placements="{Binding ElementName=BoardSelector, Path=SelectedPlacements}"
 			/>
+			<!--
+							Placements="{Binding ElementName=BoardSelector, Path=SelectedPlacements}"
+			-->
 		</Grid>
 		<StackPanel Orientation="Vertical" Grid.Column="1" Grid.Row="1">
 			<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
