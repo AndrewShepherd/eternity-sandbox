@@ -42,43 +42,37 @@
 					}
 			).ToProperty(
 				this,
-				vm => vm.SolutionsText,
-				out _solutionsText
+				vm => vm.SolutionsText
 			);
 
-			this.WhenAnyValue(
+			_showCurrentWorking = this.WhenAnyValue(
 				vm => vm.CurrentSelection
 			).Select(
 				v => v == Selection.WorkingSolution
 			).ToProperty(
 				this,
-				vm => vm.ShowCurrentWorking,
-				out _showCurrentWorking
+				vm => vm.ShowCurrentWorking
 			);
 
-			this.WhenAnyValue(
+			_showSolution = this.WhenAnyValue(
 				vm => vm.CurrentSelection
 			).Select(
 				v => v == Selection.CompleteSolution
 			).ToProperty(
 				this,
-				vm => vm.ShowSolution,
-				out _showSolution
+				vm => vm.ShowSolution
 			);
 
-			this.WhenAnyValue(
+			_showSolutionEnabled = this.WhenAnyValue(
 				vm => vm.Solutions
 			).Select(
 				s => s is IReadOnlyList<Placements> l && l.Count > 0
 			).ToProperty(
 				this,
-				vm => vm.ShowSolutionEnabled,
-				out _showSolutionEnabled
+				vm => vm.ShowSolutionEnabled
 			);
 
-			IObservable<Selection> currentSelectionObservable = this.WhenAnyValue(vm => vm.CurrentSelection);
-			IObservable<Placements?> workingPlacementsObservable = this.WhenAnyValue(vm => vm.WorkingPlacements);
-			IObservable<Placements?> completeSolutionObservable = this.WhenAnyValue(vm => vm.Solutions)
+			var completeSolutionObservable = this.WhenAnyValue(vm => vm.Solutions)
 				.Select(
 					s =>
 						s switch
@@ -88,21 +82,19 @@
 						}
 				);
 
-			var selectedPlacementsObservable = currentSelectionObservable
+			_selectedPlacements = this.WhenAnyValue(vm => vm.CurrentSelection)
 				.Select(selection =>
 					selection switch
 					{
-						Selection.WorkingSolution => workingPlacementsObservable,
+						Selection.WorkingSolution => this.WhenAnyValue(vm => vm.WorkingPlacements),
 						Selection.CompleteSolution => completeSolutionObservable,
 						_ => Observable.Return<Placements?>(null)
 					}
-				).Switch();
-
-			selectedPlacementsObservable.ToProperty(
-				this,
-				vm => vm.SelectedPlacements,
-				out _selectedPlacements
-			);
+				).Switch()
+				.ToProperty(
+					this,
+					vm => vm.SelectedPlacements
+				);
 		}
 
 		IReadOnlyList<Placements>? _solutions;
