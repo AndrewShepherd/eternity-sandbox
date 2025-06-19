@@ -25,7 +25,7 @@
 			Executed="OpenCommand_Executed"
 			/>
 	</Window.CommandBindings>
-	<Grid DataContext="{StaticResource MainWindowViewModel}">
+	<Grid x:Name="MainGrid" DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
@@ -48,7 +48,7 @@
 			<local:BoardSelector
 				x:Name="BoardSelector"
 				Grid.Row="0"
-				Solutions="{Binding SolutionsList}"
+				SolutionsList="{Binding Solutions}"
 				WorkingPlacements="{Binding Placements}"
 				/>
 			<local:BoardDisplay

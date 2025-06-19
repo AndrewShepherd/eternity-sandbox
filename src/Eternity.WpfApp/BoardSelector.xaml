@@ -25,9 +25,9 @@
 		Orientation="Horizontal"
 		DataContext="{StaticResource BoardSelectorViewModel}"
 	>
-		<ToggleButton>Show Current Working</ToggleButton>
-		<TextBlock>3 Solutions Generated</TextBlock>
-		<ToggleButton>Show Solution</ToggleButton>
+		<ToggleButton IsChecked="{Binding ShowCurrentWorking, Mode=TwoWay}">Show Current Working</ToggleButton>
+		<TextBlock Text="{Binding SolutionsText}" />
+		<ToggleButton IsChecked="{Binding ShowSolution, Mode=TwoWay}" IsEnabled="{Binding ShowSolutionEnabled}">Show Solution</ToggleButton>
 		<Button>&lt;&lt;</Button>
 		<TextBox Text="3" />
 		<Button>&gt;&gt;</Button>

@@ -47,9 +47,16 @@
 		private BoardSelectorViewModel? ViewModel => (this.Resources["BoardSelectorViewModel"] as BoardSelectorViewModel);
 
 		public static DependencyProperty SolutionsDependencyProperty = DependencyProperty.Register(
-			nameof(Solutions),
+			nameof(SolutionsList),
 			typeof(IReadOnlyList<Placements>),
-			typeof(BoardSelector)
+			typeof(BoardSelector),
+			new PropertyMetadata()
+			{
+				PropertyChangedCallback = (o, v) =>
+				{
+					(o as BoardSelector)!.SolutionsList = v.NewValue as IReadOnlyList<Placements>;
+				}
+			}
 		);
 
 		public static DependencyProperty WorkingPlacementsDependencyProperty = DependencyProperty.Register(
@@ -60,12 +67,12 @@
 			{
 				PropertyChangedCallback = (o, v) =>
 				{
-					(o as BoardSelector)!.WorkingPlacements = (Eternity.Placements)v.NewValue;
+					(o as BoardSelector)!.WorkingPlacements = v.NewValue as Placements;
 				}
 			}
 
 		);
-		public IReadOnlyList<Placements>? Solutions
+		public IReadOnlyList<Placements>? SolutionsList
 		{
 			get => this.ViewModel?.Solutions;
 			set
