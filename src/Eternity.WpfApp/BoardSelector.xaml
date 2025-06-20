@@ -8,7 +8,7 @@
              >
 	<UserControl.Resources>
 		<local:BoardSelectorViewModel x:Key="BoardSelectorViewModel" />
-		<Style TargetType="ToggleButton">
+		<Style TargetType="RadioButton">
 			<Setter Property="Margin" Value="6,6,6,6" />
 		</Style>
 		<Style TargetType="TextBlock">
@@ -25,9 +25,9 @@
 		Orientation="Horizontal"
 		DataContext="{StaticResource BoardSelectorViewModel}"
 	>
-		<ToggleButton IsChecked="{Binding ShowCurrentWorking, Mode=TwoWay}">Show Current Working</ToggleButton>
+		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.WorkingSolutionConverter}, Mode=TwoWay}">Show Current Working</RadioButton>
 		<TextBlock Text="{Binding SolutionsText}" />
-		<ToggleButton IsChecked="{Binding ShowSolution, Mode=TwoWay}" IsEnabled="{Binding ShowSolutionEnabled}">Show Solution</ToggleButton>
+		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.CompleteSolutionConverter}, Mode=TwoWay}" IsEnabled="{Binding ShowSolutionEnabled}">Show Solution</RadioButton>
 		<Button>&lt;&lt;</Button>
 		<TextBox Text="3" />
 		<Button>&gt;&gt;</Button>

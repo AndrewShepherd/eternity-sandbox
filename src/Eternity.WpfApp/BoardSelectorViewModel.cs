@@ -4,8 +4,9 @@
 	using ReactiveUI;
 	using System.Collections.Generic;
 	using System.Reactive.Linq;
+	using System.Windows.Data;
 
-	class BoardSelectorViewModel : ReactiveObject
+	public class BoardSelectorViewModel : ReactiveObject
 	{
 		public enum Selection
 		{
@@ -13,20 +14,15 @@
 			CompleteSolution
 		}
 
-		private Selection _currentSelection = Selection.WorkingSolution;
-		public Selection CurrentSelection
-		{
-			get => _currentSelection;
-			set
-			{
-				this.RaiseAndSetIfChanged(ref _currentSelection, value);
-			}
-		}
+		// Converters for radio button binding
+		public static readonly IValueConverter WorkingSolutionConverter = SelectionToBooleanConverter.Create(Selection.WorkingSolution);
+		public static readonly IValueConverter CompleteSolutionConverter = SelectionToBooleanConverter.Create(Selection.CompleteSolution);
 
+		Selection _currentSelection = Selection.WorkingSolution;
+		IReadOnlyList<Placements>? _solutions;
+		Placements? _workingPlacements = null;
 		readonly ObservableAsPropertyHelper<Placements?> _selectedPlacements;
 		readonly ObservableAsPropertyHelper<string> _solutionsText;
-		readonly ObservableAsPropertyHelper<bool> _showCurrentWorking;
-		readonly ObservableAsPropertyHelper<bool> _showSolution;
 		readonly ObservableAsPropertyHelper<bool> _showSolutionEnabled;
 
 		public BoardSelectorViewModel()
@@ -43,24 +39,6 @@
 			).ToProperty(
 				this,
 				vm => vm.SolutionsText
-			);
-
-			_showCurrentWorking = this.WhenAnyValue(
-				vm => vm.CurrentSelection
-			).Select(
-				v => v == Selection.WorkingSolution
-			).ToProperty(
-				this,
-				vm => vm.ShowCurrentWorking
-			);
-
-			_showSolution = this.WhenAnyValue(
-				vm => vm.CurrentSelection
-			).Select(
-				v => v == Selection.CompleteSolution
-			).ToProperty(
-				this,
-				vm => vm.ShowSolution
 			);
 
 			_showSolutionEnabled = this.WhenAnyValue(
@@ -97,7 +75,6 @@
 				);
 		}
 
-		IReadOnlyList<Placements>? _solutions;
 		public IReadOnlyList<Placements>? Solutions 
 		{
 			get => _solutions;
@@ -106,36 +83,25 @@
 			}
 		}
 
+		public Selection CurrentSelection
+		{
+			get => _currentSelection;
+			set => this.RaiseAndSetIfChanged(ref _currentSelection, value);
+		}
+
 		public string SolutionsText => _solutionsText.Value;
 
-		private Placements? _workingPlacements = null;
 		public Placements? WorkingPlacements
 		{
 			get => _workingPlacements;
-			internal set
-			{
-				this.RaiseAndSetIfChanged(ref _workingPlacements, value, nameof(WorkingPlacements));
-			}
+			internal set => 
+				this.RaiseAndSetIfChanged(
+					ref _workingPlacements,
+					value,
+					nameof(WorkingPlacements)
+				);
 		}
 		public Placements? SelectedPlacements => _selectedPlacements.Value;
-
-		public bool ShowCurrentWorking
-		{
-			get => _showCurrentWorking.Value;
-			set
-			{
-				this.CurrentSelection = value ? Selection.WorkingSolution : Selection.CompleteSolution;
-			}
-		}
-
-		public bool ShowSolution
-		{
-			get => _showSolution.Value;
-			set
-			{
-				this.CurrentSelection = value ? Selection.CompleteSolution : Selection.WorkingSolution;
-			}
-		}
 
 		public bool ShowSolutionEnabled => _showSolutionEnabled.Value;
 	}
