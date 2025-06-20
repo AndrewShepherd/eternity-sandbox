@@ -5,6 +5,7 @@
 	using System.Collections.Generic;
 	using System.Reactive.Linq;
 	using System.Windows.Data;
+	using System.Windows.Input;
 
 	public class BoardSelectorViewModel : ReactiveObject
 	{
@@ -21,9 +22,13 @@
 		Selection _currentSelection = Selection.WorkingSolution;
 		IReadOnlyList<Placements>? _solutions;
 		Placements? _workingPlacements = null;
+		int? _solutionIndex = 1;
 		readonly ObservableAsPropertyHelper<Placements?> _selectedPlacements;
 		readonly ObservableAsPropertyHelper<string> _solutionsText;
 		readonly ObservableAsPropertyHelper<bool> _showSolutionEnabled;
+
+		public ICommand PreviousSolutionCommand { get; }
+		public ICommand NextSolutionCommand { get; }
 
 		public BoardSelectorViewModel()
 		{
@@ -50,15 +55,59 @@
 				vm => vm.ShowSolutionEnabled
 			);
 
-			var completeSolutionObservable = this.WhenAnyValue(vm => vm.Solutions)
-				.Select(
-					s =>
-						s switch
-						{
-							IReadOnlyList<Placements> l when l.Count > 0 => l[0],
-							_ => null
-						}
-				);
+			var canExecutePrevious = this.WhenAnyValue(
+				vm => vm.SolutionIndex,
+				vm => vm.Solutions,
+				(index, solutions) => index.HasValue && index > 1 && solutions is not null && solutions.Count > 0
+			);
+
+			PreviousSolutionCommand = ReactiveCommand.Create(
+				() =>
+				{
+					if (SolutionIndex.HasValue)
+					{
+						SolutionIndex--;
+					}
+				},
+				canExecutePrevious
+			);
+
+			var canExecuteNext = this.WhenAnyValue(
+				vm => vm.SolutionIndex,
+				vm => vm.Solutions,
+				(index, solutions) => index.HasValue && solutions is not null && index < solutions.Count
+			);
+
+			NextSolutionCommand = ReactiveCommand.Create(
+				() =>
+				{
+					if (SolutionIndex.HasValue)
+					{
+						SolutionIndex++;
+					}
+				},
+				canExecuteNext
+			);
+
+			var completeSolutionObservable = Observable.CombineLatest(
+				this.WhenAnyValue(vm => vm.Solutions),
+				this.WhenAnyValue(vm => vm.SolutionIndex),
+				(solutions, index) =>
+				{
+					if ((solutions == null) || (solutions.Count == 0))
+					{
+						return default;
+					}
+
+					return index switch
+					{
+						null => solutions.Count > 0 ? solutions[0] : null,
+						int n when n < 1 => solutions[0],
+						int n when n > solutions.Count => solutions[solutions.Count - 1],
+						int n => solutions[n - 1]
+					};
+				}
+			);
 
 			_selectedPlacements = this.WhenAnyValue(vm => vm.CurrentSelection)
 				.Select(selection =>
@@ -81,6 +130,12 @@
 			internal set {
 				this.RaiseAndSetIfChanged(ref _solutions, value, nameof(Solutions));
 			}
+		}
+
+		public int? SolutionIndex
+		{
+			get => _solutionIndex;
+			set => this.RaiseAndSetIfChanged(ref _solutionIndex, value, nameof(SolutionIndex));
 		}
 
 		public Selection CurrentSelection

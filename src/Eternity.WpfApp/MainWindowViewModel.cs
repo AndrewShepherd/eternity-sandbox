@@ -1,6 +1,7 @@
 ﻿namespace Eternity.WpfApp
 {
 	using Prism.Commands;
+	using ReactiveUI;
 	using System.Collections.Generic;
 	using System.ComponentModel;
 	using System.Reactive.Subjects;
@@ -24,18 +25,9 @@
 		public CancellationTokenSource CancellationTokenSource => _cancellationTokenSource;
 	}
 
-	internal class MainWindowViewModel : INotifyPropertyChanged
+	internal class MainWindowViewModel : ReactiveObject
 	{
 		RunningState _state = new Stopped();
-
-		PropertyChangedEventHandler? _propertyChangedEventHandler;
-
-		event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
-		{
-			add => _propertyChangedEventHandler += value;
-
-			remove => _propertyChangedEventHandler -= value;
-		}
 
 		public IEnumerable<CanvasItem> CanvasItems
 		{
@@ -132,11 +124,6 @@
 			}
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				if (false) // _solutionState._placementStack.Count == _solutionState._pieceSides.Count)
-				{
-					// This is a success!
-					break;
-				}
 				Step(transform);
 			}
 			this.State = new Stopped();
@@ -145,14 +132,7 @@
 		public RunningState State
 		{
 			get => _state;
-			set
-			{
-				if (this._state != value)
-				{
-					this._state = value;
-					this._propertyChangedEventHandler?.Invoke(this, new(nameof(State)));
-				}
-			}
+			set => this.RaiseAndSetIfChanged(ref _state, value);
 		}
 
 		private void Go(Func<int?, int, int?> transform)
@@ -215,14 +195,7 @@
 		public int SelectedSequenceIndex
 		{
 			get => _selectedSequenceIndex;
-			set
-			{
-				if (_selectedSequenceIndex != value)
-				{
-					_selectedSequenceIndex = value;
-					_propertyChangedEventHandler?.Invoke(this, new (nameof(SelectedSequenceIndex)));
-				}
-			}
+			set => this.RaiseAndSetIfChanged(ref _selectedSequenceIndex, value);
 		}
 
 		private int _placementCount = 0;
@@ -259,16 +232,7 @@
 		{
 			this.SelectedSequenceIndex = -1;
 
-			var selectedSequenceIndexObservable = Observable.FromEventPattern<
-				PropertyChangedEventHandler,
-				PropertyChangedEventArgs
-				>(
-				handler => handler.Invoke,
-				h => this._propertyChangedEventHandler += h,
-				h => this._propertyChangedEventHandler -= h
-			).Where(p => p.EventArgs.PropertyName == nameof(SelectedSequenceIndex))
-			.Select(p => this._selectedSequenceIndex);
-
+			var selectedSequenceIndexObservable = this.WhenAnyValue(vm => vm.SelectedSequenceIndex);
 
 			var rootTreeNodeObservable = _rootTreeNode.Sample(TimeSpan.FromSeconds(0.5));
 
@@ -286,15 +250,15 @@
 				s =>
 				{
 					this.ProgressText = s;
-					this._propChangedNotifier.PropertyChanged(nameof(this.ProgressText));
+					this.RaisePropertyChanged(nameof(this.ProgressText));
 				}
 			);
 
 			rootTreeNodeObservable.Subscribe(
 				se =>
 				{
-					this._propChangedNotifier.PropertyChanged(nameof(this.StackEntries));
-					this._propChangedNotifier.PropertyChanged(nameof(this.Solutions));
+					this.RaisePropertyChanged(nameof(this.StackEntries));
+					this.RaisePropertyChanged(nameof(this.Solutions));
 				}
 			);
 
@@ -309,10 +273,10 @@
 							if (placementCount != this.PlacementCount)
 							{
 								this._placementCount = placementCount;
-								this._propChangedNotifier.PropertyChanged(nameof(PlacementCount));
+								this.RaisePropertyChanged(nameof(PlacementCount));
 							}
 						}
-						this._propChangedNotifier.PropertyChanged(nameof(Placements));
+						this.RaisePropertyChanged(nameof(Placements));
 					}
 				);
 
@@ -323,7 +287,7 @@
 				.Subscribe(
 					sequence =>
 					{
-						this._propChangedNotifier.PropertyChanged(nameof(Sequence));
+						this.RaisePropertyChanged(nameof(Sequence));
 					}
 				);
 		}
@@ -353,14 +317,9 @@
 			}
 		}
 
-		readonly ThreadSafePropertyChangedNotifier _propChangedNotifier;
-
 
 		public MainWindowViewModel()
 		{
-			_propChangedNotifier = new(
-				args => this._propertyChangedEventHandler?.Invoke(this, args)
-			);
 			var puzzleEnvironmentObservable = _generatePuzzleEnvironmentTask.ToObservable();
 			SetUpObservables();
 			SetInitialData();
