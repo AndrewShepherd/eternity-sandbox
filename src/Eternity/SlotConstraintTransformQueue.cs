@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-
-namespace Eternity
+﻿namespace Eternity
 {
 	using Lookup = Dictionary<Position, List<SlotConstraint.TransformAction>>;
 	internal class SlotConstraintTransformQueue
