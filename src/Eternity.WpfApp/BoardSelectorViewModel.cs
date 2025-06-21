@@ -22,7 +22,7 @@
 		Selection _currentSelection = Selection.WorkingSolution;
 		IReadOnlyList<Placements>? _solutions;
 		Placements? _workingPlacements = null;
-		int? _solutionIndex = 1;
+		int? _solutionIndex = null;
 		readonly ObservableAsPropertyHelper<Placements?> _selectedPlacements;
 		readonly ObservableAsPropertyHelper<string> _solutionsText;
 		readonly ObservableAsPropertyHelper<bool> _showSolutionEnabled;
@@ -88,6 +88,22 @@
 				},
 				canExecuteNext
 			);
+
+			this.WhenAnyValue(vm => vm.Solutions)
+				.Select(s => s?.Count ?? 0)
+				.Subscribe(
+					n =>
+					{
+						if (n == 0)
+						{
+							this.SolutionIndex = null;
+						}
+						else if (this.SolutionIndex == null)
+						{
+							this.SolutionIndex = 1;
+						}
+					}
+				);
 
 			var completeSolutionObservable = Observable.CombineLatest(
 				this.WhenAnyValue(vm => vm.Solutions),

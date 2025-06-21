@@ -48,10 +48,21 @@
 			<Setter Property="VerticalAlignment" Value="Center" />
 		</Style>
 		<Style TargetType="TextBox">
-			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Stretch" />
+			<Setter Property="Margin" Value="3,6,3,6" />
+			<Setter Property="MinWidth" Value="30" />
+			<Setter Property="TextAlignment" Value="Center" />
 		</Style>
 		<Style TargetType="Button">
-			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="Margin" Value="3,6,3,6" />
+			<Setter Property="Padding" Value="6,6,6,6" />
+			<Setter Property="Background">
+				<Setter.Value>
+					<SolidColorBrush Color="White" />
+				</Setter.Value>
+			</Setter>
+			<Setter Property="VerticalAlignment" Value="Stretch" />
+			<Setter Property="IsEnabled" Value="{Binding ShowSolutionEnabled}" />
 		</Style>
 	</UserControl.Resources>
 	<StackPanel
@@ -59,11 +70,15 @@
 		DataContext="{StaticResource BoardSelectorViewModel}"
 	>
 		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.WorkingSolutionConverter}, Mode=TwoWay}">Show Current Working</RadioButton>
-		<TextBlock Text="{Binding SolutionsText}" />
 		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.CompleteSolutionConverter}, Mode=TwoWay}" IsEnabled="{Binding ShowSolutionEnabled}">Show Solution</RadioButton>
-		<Button Command="{Binding PreviousSolutionCommand}">&lt;&lt;</Button>
+		<Button Command="{Binding PreviousSolutionCommand}">
+			<Path Data="M 0,4 L 8,0 L 8,8 Z" Fill="Black" Width="8" Height="8" />
+		</Button>
 		<TextBox Text="{Binding SolutionIndex, Mode=TwoWay}" />
-		<Button Command="{Binding NextSolutionCommand}">&gt;&gt;</Button>
+		<Button Command="{Binding NextSolutionCommand}">
+			<Path Data="M 0,0 L 8,4 L 0,8 Z" Fill="Black" Width="8" Height="8" />
+		</Button>
+		<TextBlock Text="{Binding SolutionsText}" />
 	</StackPanel>
 
 </UserControl>
