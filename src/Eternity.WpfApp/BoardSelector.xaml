@@ -63,6 +63,14 @@
 			</Setter>
 			<Setter Property="VerticalAlignment" Value="Stretch" />
 			<Setter Property="IsEnabled" Value="{Binding ShowSolutionEnabled}" />
+			<Style.Triggers>
+				<Trigger Property="IsEnabled" Value="False">
+					<Setter Property="Tag" Value="Gray" />
+				</Trigger>
+				<Trigger Property="IsEnabled" Value="True">
+					<Setter Property="Tag" Value="Black" />
+				</Trigger>
+			</Style.Triggers>
 		</Style>
 	</UserControl.Resources>
 	<StackPanel
@@ -72,11 +80,11 @@
 		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.WorkingSolutionConverter}, Mode=TwoWay}">Show Current Working</RadioButton>
 		<RadioButton IsChecked="{Binding CurrentSelection, Converter={x:Static local:BoardSelectorViewModel.CompleteSolutionConverter}, Mode=TwoWay}" IsEnabled="{Binding ShowSolutionEnabled}">Show Solution</RadioButton>
 		<Button Command="{Binding PreviousSolutionCommand}">
-			<Path Data="M 0,4 L 8,0 L 8,8 Z" Fill="Black" Width="8" Height="8" />
+			<Path Data="M 0,4 L 8,0 L 8,8 Z" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag}" Width="8" Height="8" />
 		</Button>
 		<TextBox Text="{Binding SolutionIndex, Mode=TwoWay}" />
 		<Button Command="{Binding NextSolutionCommand}">
-			<Path Data="M 0,0 L 8,4 L 0,8 Z" Fill="Black" Width="8" Height="8" />
+			<Path Data="M 0,0 L 8,4 L 0,8 Z" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag}" Width="8" Height="8" />
 		</Button>
 		<TextBlock Text="{Binding SolutionsText}" />
 	</StackPanel>

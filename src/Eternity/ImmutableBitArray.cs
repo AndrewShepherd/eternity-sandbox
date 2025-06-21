@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -110,36 +111,45 @@ namespace Eternity
 			}
 			return this;
 		}
-	}
 
-	public static class ImmutableBitArrayExtensions
-	{
-		public static bool IsEquivalentTo(this ImmutableBitArray a1, ImmutableBitArray a2)
+		public bool IsEquivalentTo(ImmutableBitArray other)
 		{
-			if (object.ReferenceEquals(a1, a2))
+			if (ReferenceEquals(this, other))
 			{
 				return true;
 			}
-			var e1 = a1.GetEnumerator();
-			var e2 = a2.GetEnumerator();
-			while(true)
+			if (this._count != other._count)
 			{
-				bool e1Next = e1.MoveNext();
-				bool e2Next = e2.MoveNext();
-				if (e1Next != e2Next)
-				{
-					return false;
-				}
-				if (!e1Next)
-				{
-					break;
-				}
-				if (e1.Current != e2.Current)
-				{
-					return false;
-				}
+				return false;
 			}
-			return true;
+			if (this._singleValue.HasValue && other._singleValue.HasValue)
+			{
+				return this._singleValue.Value == other._singleValue.Value;
+			}
+			if (this._singleValue.HasValue && other._bitArray != null)
+			{
+				return other._bitArray[this._singleValue.Value];
+			}
+			if (other._singleValue.HasValue && this._bitArray != null)
+			{
+				return this._bitArray[other._singleValue.Value];
+			}
+			if ((this._bitArray != null) && (other._bitArray != null))
+			{
+				for(int i = 0; i < this._bitArray.Length; ++i)
+				{
+					if (this._bitArray[i] != other._bitArray[i])
+					{
+						return false;
+					}
+				}
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+
 		}
 	}
 }

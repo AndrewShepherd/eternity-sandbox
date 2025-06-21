@@ -107,7 +107,6 @@
 				<TextBlock>Placements: </TextBlock>
 				<TextBlock Text="{Binding PlacementCount}" />
 			</StackPanel>
-			<ListView Name="SolutionsList" ItemsSource="{Binding Path=Solutions}" />
 
 
 
