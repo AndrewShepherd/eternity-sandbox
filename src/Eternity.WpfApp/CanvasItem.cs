@@ -127,7 +127,7 @@ namespace Eternity.WpfApp
 
 			CanvasPieceItem? RenderFromPatternConstraints(
 				Position position,
-				ImmutableHashSet<int> constraints,
+				ImmutableBitArray constraints,
 				int rotation
 			)
 			{

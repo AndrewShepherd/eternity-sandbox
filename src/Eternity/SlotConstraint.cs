@@ -1,45 +1,28 @@
-﻿using System.Collections.Immutable;
-using System.Data;
-using System.Diagnostics.Metrics;
-using System.Runtime.CompilerServices;
+﻿
 namespace Eternity
 {
+	using System.Collections.Immutable;
+	using System.Data;
+
 	public static class ImmutableHashSetExtensions
 	{
-		public static bool IsEquivalentTo(this ImmutableHashSet<int> left, ImmutableHashSet<int> right)
-		=>
-			ReferenceEquals(left, right)
-			|| (
-				(left.Count == right.Count)
-				&& right.All(left.Contains)
-			);
-
-		public static ImmutableHashSet<int> Constrain(this ImmutableHashSet<int> s1, ImmutableHashSet<int> c)
-		{
-			if (s1.IsEquivalentTo(c))
-			{
-				return s1;
-			}
-			else
-			{
-				return s1.Intersect(c);
-			}
-		}
+		public static ImmutableBitArray Constrain(this ImmutableBitArray s1, ImmutableBitArray c) =>
+			s1.Intersect(c);
 	}
 
 	public record MultiPatternConstraints
 	{
-		public required ImmutableHashSet<int> Left;
-		public required ImmutableHashSet<int> Right;
-		public required ImmutableHashSet<int> Top;
-		public required ImmutableHashSet<int> Bottom;
+		public required ImmutableBitArray Left;
+		public required ImmutableBitArray Right;
+		public required ImmutableBitArray Top;
+		public required ImmutableBitArray Bottom;
 
 		public readonly static MultiPatternConstraints Never = new()
 		{
-			Left = ImmutableHashSet<int>.Empty,
-			Bottom = ImmutableHashSet<int>.Empty,
-			Right = ImmutableHashSet<int>.Empty,
-			Top = ImmutableHashSet<int>.Empty
+			Left = ImmutableBitArray.Empty,
+			Bottom = ImmutableBitArray.Empty,
+			Right = ImmutableBitArray.Empty,
+			Top = ImmutableBitArray.Empty
 		};
 	}
 
@@ -84,29 +67,22 @@ namespace Eternity
 		{
 		}
 
-		//public readonly static SlotConstraint Never = new()
-		//{
-		//	PiecePatternLookup = ImmutableArray<ImmutableArray<int>>.Empty,
-		//	PatternConstraints = MultiPatternConstraints.Never,
-		//	Pieces = ImmutableHashSet<int>.Empty
-		//};
-
 		public SlotConstraint SetPlacement(
 			Placement placement
 		)
 		{
-			// TODO: Update the edge constraints
 			var newPatternConstraints = new MultiPatternConstraints
 			{
-				Left = ImmutableHashSet<int>.Empty,
-				Bottom = ImmutableHashSet<int>.Empty,
-				Right = ImmutableHashSet<int>.Empty,
-				Top = ImmutableHashSet<int>.Empty,
+				Left = ImmutableBitArray.Empty,
+				Bottom = ImmutableBitArray.Empty,
+				Right = ImmutableBitArray.Empty,
+				Top = ImmutableBitArray.Empty,
 			};
 			var patterns = this.PiecePatternLookup[placement.PieceIndex];
+			var rotated = new int[4];
 			foreach (var rotation in placement.Rotations)
 			{
-				var rotated = RotationExtensions.Rotate(patterns, rotation);
+				RotationExtensions.Rotate(patterns, rotation, rotated);
 				newPatternConstraints = new MultiPatternConstraints
 				{
 					Left = newPatternConstraints.Left.Add(rotated[EdgeIndexes.Left]),
@@ -122,24 +98,24 @@ namespace Eternity
 			};
 		}
 
-
+		// THIS IS THE METHOD THAT IT IS ALWAYS IN
 		private static MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
 			IEnumerable<int> availablePieces,
 			MultiPatternConstraints currentConstraints,
 			IReadOnlyList<ImmutableArray<int>> piecePatternLookup
 		)
 		{
-			var top = new HashSet<int>();
-			var bottom = new HashSet<int>();
-			var left = new HashSet<int>();
-			var right = new HashSet<int>();
-
+			var top = ImmutableBitArray.Empty;
+			var bottom = ImmutableBitArray.Empty;
+			var left = ImmutableBitArray.Empty;
+			var right = ImmutableBitArray.Empty;
+			int[] rotatedPattern = new int[4];
 			foreach (var pieceIndex in availablePieces)
 			{
 				var piecePattern = piecePatternLookup[pieceIndex];
 				foreach (var rotation in RotationExtensions.AllRotations)
 				{
-					var rotatedPattern = RotationExtensions.Rotate(piecePattern, rotation);
+					RotationExtensions.Rotate(piecePattern, rotation, rotatedPattern);
 					if (
 						currentConstraints.Top.Contains(rotatedPattern[EdgeIndexes.Top])
 						&& currentConstraints.Left.Contains(rotatedPattern[EdgeIndexes.Left])
@@ -147,10 +123,22 @@ namespace Eternity
 						&& currentConstraints.Right.Contains(rotatedPattern[EdgeIndexes.Right])
 					)
 					{
-						top.Add(rotatedPattern[EdgeIndexes.Top]);
-						bottom.Add(rotatedPattern[EdgeIndexes.Bottom]);
-						left.Add(rotatedPattern[EdgeIndexes.Left]);
-						right.Add(rotatedPattern[EdgeIndexes.Right]);
+						top = top.Add(rotatedPattern[EdgeIndexes.Top]);
+						bottom = bottom.Add(rotatedPattern[EdgeIndexes.Bottom]);
+						left = left.Add(rotatedPattern[EdgeIndexes.Left]);
+						right = right.Add(rotatedPattern[EdgeIndexes.Right]);
+						if (
+							(top.Count == currentConstraints.Top.Count)
+							&&
+							(left.Count == currentConstraints.Left.Count)
+							&&
+							(right.Count == currentConstraints.Right.Count)
+							&&
+							(bottom.Count == currentConstraints.Bottom.Count)
+						)
+						{
+							return currentConstraints;
+						}
 					}
 				}
 			}
@@ -169,13 +157,14 @@ namespace Eternity
 		)
 		{
 			var rv = hashSet;
+			int[] rotatedPattern = new int[4];
 			foreach (var pieceIndex in hashSet)
 			{
 				var piecePattern = this.PiecePatternLookup[pieceIndex];
 				bool approved = false;
 				foreach (var rotation in RotationExtensions.AllRotations)
 				{
-					var rotatedPattern = RotationExtensions.Rotate(piecePattern, rotation);
+					RotationExtensions.Rotate(piecePattern, rotation, rotatedPattern);
 					if (
 						c.Top.Contains(rotatedPattern[EdgeIndexes.Top])
 						&& c.Left.Contains(rotatedPattern[EdgeIndexes.Left])
@@ -276,17 +265,17 @@ namespace Eternity
 		public SlotConstraint SetTopPattern(
 			int pattern
 		) => ModifyPatternConstraints(
-			mp => mp with { Top = new[] { pattern }.ToImmutableHashSet() }
+			mp => mp with { Top = ImmutableBitArray.SingleValue(pattern) }
 		);
 
 		public SlotConstraint SetLeftPattern(
 			int pattern
 		) => ModifyPatternConstraints(
-			mp => mp with { Left = new[] { pattern }.ToImmutableHashSet() }
+			mp => mp with { Left = ImmutableBitArray.SingleValue(pattern) }
 		);
 
 		public SlotConstraint ConstrainLeftPattern(
-			ImmutableHashSet<int> patterns
+			ImmutableBitArray patterns
 		) => ModifyPatternConstraints(
 			mp =>
 				mp with
@@ -296,7 +285,7 @@ namespace Eternity
 		);
 
 		public SlotConstraint ConstrainTopPattern(
-			ImmutableHashSet<int> patterns
+			ImmutableBitArray patterns
 		) => ModifyPatternConstraints(
 			mp =>
 				mp with
@@ -306,7 +295,7 @@ namespace Eternity
 		);
 
 		public SlotConstraint ConstrainBottomPattern(
-			ImmutableHashSet<int> patterns
+			ImmutableBitArray patterns
 		) => ModifyPatternConstraints(
 			mp =>
 				mp with
@@ -316,7 +305,7 @@ namespace Eternity
 		);
 
 		public SlotConstraint ConstrainRightPattern(
-			ImmutableHashSet<int> patterns
+			ImmutableBitArray patterns
 		) => ModifyPatternConstraints(
 			mp =>
 				mp with
@@ -328,13 +317,13 @@ namespace Eternity
 		public SlotConstraint SetRightPattern(
 			int pattern
 		) => ModifyPatternConstraints(
-			mp => mp with { Right = new[] { pattern }.ToImmutableHashSet() }
+			mp => mp with { Right = ImmutableBitArray.SingleValue(pattern) }
 		);
 
 		public SlotConstraint SetBottomPattern(
 			int pattern
 		) => ModifyPatternConstraints(
-			mp => mp with { Bottom = new[] { pattern }.ToImmutableHashSet() }
+			mp => mp with { Bottom = ImmutableBitArray.SingleValue(pattern) }
 		);
 
 
@@ -367,10 +356,10 @@ namespace Eternity
 
 	public static class SquareConstraintExtensions
 	{
-		public static ImmutableHashSet<int> AllPatterns = Enumerable.Range(0, 48).ToImmutableHashSet();
-		public static ImmutableHashSet<int> NotEdgePatterns = AllPatterns.Remove(23);
+		public static ImmutableBitArray AllPatterns = ImmutableBitArray.AllPieces(49);
+		public static ImmutableBitArray NotEdgePatterns = AllPatterns.Remove(23);
 
-		public static bool IsEquiavelentTo(
+		public static bool IsEquivalentTo(
 			this SlotConstraint c1,
 			SlotConstraint c2
 		) =>
@@ -405,33 +394,33 @@ namespace Eternity
 
 			public static SlotConstraint.TransformAction SetLeftPattern(int pattern) =>
 				ModifyPatterns(
-					p => p with { Left = new[] { pattern }.ToImmutableHashSet() }
+					p => p with { Left = ImmutableBitArray.SingleValue(pattern) }
 				);
 
 			public static SlotConstraint.TransformAction SetTopPattern(int pattern) =>
 				ModifyPatterns(
-					p => p with { Top = new[] { pattern }.ToImmutableHashSet() }
+					p => p with { Top = ImmutableBitArray.SingleValue(pattern) }
 				);
 
 			public static SlotConstraint.TransformAction SetRightPattern(int pattern) =>
 				ModifyPatterns(
-					p => p with { Right = new[] { pattern }.ToImmutableHashSet() }
+					p => p with { Right = ImmutableBitArray.SingleValue(pattern) }
 				);
 
 			public static SlotConstraint.TransformAction SetBottomPattern(int pattern) =>
 				ModifyPatterns(
-					p => p with { Bottom = new[] { pattern }.ToImmutableHashSet() }
+					p => p with { Bottom = ImmutableBitArray.SingleValue(pattern) }
 				);
 
 			public static SlotConstraint.TransformAction ConstrainRightPattern(
-				ImmutableHashSet<int> patterns
+				ImmutableBitArray patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Right = p.Right.Constrain(patterns) }
 				);
 
 			public static SlotConstraint.TransformAction ConstrainTopPattern(
-				ImmutableHashSet<int> patterns
+				ImmutableBitArray patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Top = p.Top.Constrain(patterns) }
@@ -439,14 +428,14 @@ namespace Eternity
 
 
 			public static SlotConstraint.TransformAction ConstrainBottomPattern(
-				ImmutableHashSet<int> patterns
+				ImmutableBitArray patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Bottom = p.Bottom.Constrain(patterns) }
 				);
 
 			public static SlotConstraint.TransformAction ConstrainLeftPattern(
-				ImmutableHashSet<int> patterns
+				ImmutableBitArray patterns
 			) =>
 				ModifyPatterns(
 					p => p with { Left = p.Left.Constrain(patterns) }
@@ -475,7 +464,7 @@ namespace Eternity
 					var constraintIndex = dimensions.PositionToIndex(position);
 					var before = constraints[constraintIndex];
 					var after = before.Transform(transforms);
-					if (!before.IsEquiavelentTo(after))
+					if (!before.IsEquivalentTo(after))
 					{
 						anyChanges = true;
 						constraints[constraintIndex] = after;
@@ -491,7 +480,7 @@ namespace Eternity
 							var removePiece = Transforms.RemovePossiblePiece(thePieceIndex);
 							for (var i = 0; i < constraints.Length; ++i)
 							{
-								if (i != constraintIndex)
+								if ((i != constraintIndex) && constraints[i].Pieces.Contains(thePieceIndex))
 								{
 									q.Push(
 										dimensions.IndexToPosition(i),

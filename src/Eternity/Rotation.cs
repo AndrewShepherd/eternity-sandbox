@@ -17,14 +17,12 @@
 			Rotation.TwoSeventy
 		];
 
-		public static IReadOnlyList<int> Rotate(IReadOnlyList<int> edges, Rotation rotation)
+		public static void Rotate(IReadOnlyList<int> edges, Rotation rotation, Span<int> result)
 		{
-			var result = new int[edges.Count];
 			for (int i = 0; i < edges.Count; i++)
 			{
 				result[(i + (int)rotation) % edges.Count] = edges[i];
 			}
-			return result;
 		}
 	}
 }

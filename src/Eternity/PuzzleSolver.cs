@@ -11,9 +11,10 @@
 			var pc = listPlacements.Constraints.At(position).PatternConstraints;
 			var patterns = listPlacements.PieceSides[pieceIndex];
 			List<Rotation> result = new List<Rotation>();
+			int[] rp = new int[4];
 			foreach(var rotation in RotationExtensions.AllRotations)
 			{
-				var rp = RotationExtensions.Rotate(patterns, rotation);
+				RotationExtensions.Rotate(patterns, rotation, rp);
 				if (
 					pc.Left.Contains(rp[EdgeIndexes.Left])
 					&& pc.Top.Contains(rp[EdgeIndexes.Top])

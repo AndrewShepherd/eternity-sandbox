@@ -104,12 +104,9 @@
 				<TextBlock Text="{Binding ProgressText}" />
 			</StackPanel>
 			<StackPanel Orientation="Horizontal">
-				<TextBlock>Placements: </TextBlock>
+				<TextBlock>Placements:</TextBlock>
 				<TextBlock Text="{Binding PlacementCount}" />
 			</StackPanel>
-
-
-
 		</StackPanel>
 	</Grid>
 </Window>
