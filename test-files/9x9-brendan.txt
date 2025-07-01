@@ -1,0 +1,5 @@
+aaxx,adxx,baxx,bbxx,gdxa,haxa,ibxa,jbxa,jcxa,jdxa,edxb,gcxb,ibxb,lbxb,maxb,mdxb,ebxc,gbxc,
+gcxc,hcxc,icxc,kaxc,kbxc,mcxc,eaxd,edxd,fdxd,hcxd,kaxd,laxd,lcxd,mdxd,eelh,efei,efhh,efig,
+efmh,egfh,eghk,egkl,egmk,ehfg,ehhh,ehjh,eijf,ejii,ekem,ekkj,elfj,eljk,ellh,ffhl,fgfi,fgjm,
+fhjh,fhmg,fiih,fiii,fikg,fjhj,fjll,fjmk,fkgl,fkkm,fkml,flij,ggkk,ggli,ggml,gikm,gimi,gjlj,
+gljm,gmhm,hklm,hlmi,hmkj,iijm,ijjk,jkll,klmm
