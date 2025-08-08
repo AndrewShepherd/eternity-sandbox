@@ -40,7 +40,7 @@
 		public static readonly TreeNode Instance = new UnexploredTreeNode();
 	}
 
-	public class StackEntryTreeNode : TreeNode
+	public class PartiallyExploredTreeNode : TreeNode
 	{
 		public required ImmutableList<TreeNode> ChildNodes { get; init; }
 
@@ -86,7 +86,7 @@
 			IEnumerable<Placements> solutions = Enumerable.Empty<Placements>();
 			foreach(var child in newChildren)
 			{
-				hasAtLeastOneStillToBeExplored = hasAtLeastOneStillToBeExplored || (child is StackEntryTreeNode or UnexploredTreeNode);
+				hasAtLeastOneStillToBeExplored = hasAtLeastOneStillToBeExplored || (child is PartiallyExploredTreeNode or UnexploredTreeNode);
 				var thisEstimate = child.TotalNodesEstimate;
 				if (thisEstimate.HasValue)
 				{
@@ -99,7 +99,7 @@
 			var calculatedEstimate = CalculateEstimate(accumulatedEstimate, estimateContributors, newChildren.Count);
 			if (hasAtLeastOneStillToBeExplored)
 			{
-				return new StackEntryTreeNode
+				return new PartiallyExploredTreeNode
 				{
 					ChildNodes = newChildren,
 					NodesExplored = accumulatedNodesExplored + 1,

@@ -48,7 +48,7 @@
 			}	
 			(var nextPosition, _) = newStackEntry.Positioner.GetNext(newStackEntry.Placements!.Constraints);
 			var possiblePieces = newStackEntry.Placements!.Constraints.At(nextPosition).Pieces;
-			return new StackEntryTreeNode
+			return new PartiallyExploredTreeNode
 			{
 				ChildNodes = possiblePieces.Select(p => UnexploredTreeNode.Instance).ToImmutableList(),
 				StackEntry = newStackEntry,
@@ -94,10 +94,10 @@
 			return UnsuccessfulPlacementTreeNode.Instance;
 		}
 
-		public static IEnumerable<StackEntryTreeNode> GetStackEntries(StackEntryTreeNode firstElement)
+		public static IEnumerable<PartiallyExploredTreeNode> GetStackEntries(PartiallyExploredTreeNode firstElement)
 		{
 			yield return firstElement;
-			var firstChild = firstElement.ChildNodes.OfType<StackEntryTreeNode>().FirstOrDefault();
+			var firstChild = firstElement.ChildNodes.OfType<PartiallyExploredTreeNode>().FirstOrDefault();
 			if (firstChild != null)
 			{
 				foreach(var childEntry in GetStackEntries(firstChild))
@@ -108,8 +108,8 @@
 		}
 
 		private static TreeNode UpdateLastNode(
-			List<StackEntryTreeNode> l,
-			Func<StackEntryTreeNode, TreeNode> transform
+			List<PartiallyExploredTreeNode> l,
+			Func<PartiallyExploredTreeNode, TreeNode> transform
 		)
 		{
 			var lastNode = l.Last();
@@ -126,7 +126,7 @@
 			}
 		}
 
-		private static TreeNode GenerateChildNode(StackEntryTreeNode setn, int index)
+		private static TreeNode GenerateChildNode(PartiallyExploredTreeNode setn, int index)
 		{
 			var thisConstraints = setn.StackEntry.Placements!.Constraints;
 			(var nextPosition, var nextPositioner) = setn.StackEntry.Positioner.GetNext(thisConstraints);
@@ -157,7 +157,7 @@
 		private record class ProgressToFirstSuccessResult(TreeNode treeNode, bool foundSuccess); 
 		private static ProgressToFirstSuccessResult ProgressToFirstSuccess(TreeNode treeNode, Func<int?, int, int?> progressIndex)
 		{
-			if (treeNode is StackEntryTreeNode setn)
+			if (treeNode is PartiallyExploredTreeNode setn)
 			{
 				var childNodeCount = setn.ChildNodes.Count;
 				var thisConstraints = setn.StackEntry.Placements!.Constraints;
@@ -174,7 +174,7 @@
 					{
 						var newChild = GenerateChildNode(setn, index.Value);
 						var newSetn = setn.ReplaceAt(index.Value, newChild);
-						if (newChild is StackEntryTreeNode)
+						if (newChild is PartiallyExploredTreeNode)
 						{
 							return new(newSetn, true);
 						}
@@ -183,7 +183,7 @@
 							return ProgressToFirstSuccess(newSetn, progressIndex);
 						}
 					}
-					else if (childNode is StackEntryTreeNode childSetn)
+					else if (childNode is PartiallyExploredTreeNode childSetn)
 					{
 						(var newChildNode, bool success) = ProgressToFirstSuccess(childNode, progressIndex);
 						var newSetn = setn.ReplaceAt(index.Value, newChildNode);
@@ -210,7 +210,7 @@
 			Func<int?, int, int?> progressIndex
 		)
 		{
-			if (treeNode is StackEntryTreeNode setn)
+			if (treeNode is PartiallyExploredTreeNode setn)
 			{
 				var childNodeCount = setn.ChildNodes.Count;
 				for (
@@ -226,7 +226,7 @@
 						childNode = ExtendThroughDefaultSelection(childNode, progressIndex);
 						return setn.ReplaceAt(index.Value, childNode);
 					}
-					if (childNode is StackEntryTreeNode)
+					if (childNode is PartiallyExploredTreeNode)
 					{
 						return setn.ReplaceAt(
 							index.Value,

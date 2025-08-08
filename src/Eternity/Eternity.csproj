@@ -11,4 +11,9 @@
     <EmbeddedResource Include="Resources\*" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eternity.Proto\Eternity.Proto.csproj" />
+  </ItemGroup>
+
 </Project>

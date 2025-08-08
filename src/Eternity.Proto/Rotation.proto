@@ -1,0 +1,13 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+
+package Eternity.Proto;
+
+enum Rotation 
+{
+	None = 0;
+	Ninety = 1;
+	OneEighty = 2;
+	TwoSeventy = 3;
+}

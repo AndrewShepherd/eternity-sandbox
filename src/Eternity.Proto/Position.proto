@@ -1,0 +1,11 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+
+package Eternity.Proto;
+
+message Position
+{
+	int32 x = 1;
+	int32 y = 2;
+}

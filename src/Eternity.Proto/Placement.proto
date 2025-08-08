@@ -1,0 +1,14 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+
+package Eternity.Proto;
+
+import "Position.proto";
+import "Rotation.proto";
+
+message Placement {
+	Position position = 1;
+	int32 pieceIndex = 2;
+	repeated Rotation rotations = 3;
+}

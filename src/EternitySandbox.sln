@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.WpfApp", "Eternity
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Tests", "Eternity.Tests\Eternity.Tests.csproj", "{7AD8C19F-468D-4A2C-89CE-D2391974F63A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Proto", "Eternity.Proto\Eternity.Proto.csproj", "{2829367E-C504-4260-A76D-1C97843EECDB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,8 +35,15 @@ Global
 		{7AD8C19F-468D-4A2C-89CE-D2391974F63A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AD8C19F-468D-4A2C-89CE-D2391974F63A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AD8C19F-468D-4A2C-89CE-D2391974F63A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2829367E-C504-4260-A76D-1C97843EECDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2829367E-C504-4260-A76D-1C97843EECDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2829367E-C504-4260-A76D-1C97843EECDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2829367E-C504-4260-A76D-1C97843EECDB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {14ACBE72-4053-4FA4-AD9C-2E4C7BB8EC2B}
 	EndGlobalSection
 EndGlobal

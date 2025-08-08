@@ -41,7 +41,7 @@
 			{
 				return (this._solutionState?._treeNode) switch
 				{
-					StackEntryTreeNode seTreeNode => StackEntryExtensions.GetStackEntries(seTreeNode).Last().StackEntry.Placements,
+					PartiallyExploredTreeNode seTreeNode => StackEntryExtensions.GetStackEntries(seTreeNode).Last().StackEntry.Placements,
 					_ => default
 				};
 			}
@@ -183,7 +183,7 @@
 			{
 				return _solutionState?._treeNode switch
 				{
-					StackEntryTreeNode tn => StackEntryExtensions.GetStackEntries(tn).Select(e => e.StackEntry).ToList(),
+					PartiallyExploredTreeNode tn => StackEntryExtensions.GetStackEntries(tn).Select(e => e.StackEntry).ToList(),
 					_ => []
 				};
 			}
@@ -228,6 +228,9 @@
 			this.SetPieceSides(puzzleEnvironment.PieceSides);
 		}
 
+		public BigInteger NodesProcessed { get; set; }
+		public BigInteger EstimatedNodes { get; set; }
+
 		private void SetUpObservables()
 		{
 			this.SelectedSequenceIndex = -1;
@@ -242,15 +245,15 @@
 
 			var scoreObservable = rootTreeNodeObservable.Select(
 				CalculateStackProgress
-			).Select(
-				r => $"{r.division:N2} ({r.stepsTaken:N0}/{r.totalSteps:N0})"
 			);
 
 			scoreObservable.Subscribe(
 				s =>
 				{
-					this.ProgressText = s;
-					this.RaisePropertyChanged(nameof(this.ProgressText));
+					this.NodesProcessed = s.StepsTaken;
+					this.EstimatedNodes = s.TotalSteps;
+					this.RaisePropertyChanged(nameof(this.NodesProcessed));
+					this.RaisePropertyChanged(nameof(this.EstimatedNodes));
 				}
 			);
 
@@ -293,9 +296,9 @@
 		}
 
 		record StackProgress(
-			BigInteger stepsTaken,
-			BigInteger totalSteps,
-			double? division
+			BigInteger StepsTaken,
+			BigInteger TotalSteps,
+			double? Division
 		);
 
 		private static StackProgress CalculateStackProgress(TreeNode treeNode) =>

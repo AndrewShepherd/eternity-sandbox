@@ -99,10 +99,35 @@
 					   FontSize="16" FontFamily="Courier New"
 					   HorizontalAlignment="Center"
 					    />
-			<StackPanel Orientation="Horizontal">
-				<TextBlock>Progress:</TextBlock>
-				<TextBlock Text="{Binding ProgressText}" />
-			</StackPanel>
+			<Grid x:Name="StatisticsGrid" Width="Auto">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.Resources>
+					<Style TargetType="TextBlock">
+						<Setter Property="HorizontalAlignment" Value="Right" />
+						<Setter Property="FontFamily" Value="Courier New" />
+						<Setter Property="FontSize" Value="24" />
+					</Style>
+				</Grid.Resources>
+				<Label Grid.Row="0" Grid.Column="0">
+					Nodes Processed
+				</Label>
+				<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding NodesProcessed, StringFormat='{}{0:N0}'}" />
+				<Label Grid.Row="1" Grid.Column="0">
+					Estimated Nodes
+				</Label>
+				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EstimatedNodes, StringFormat='{}{0:N0}'}" />
+
+
+
+			</Grid>
+
 			<StackPanel Orientation="Horizontal">
 				<TextBlock>Placements:</TextBlock>
 				<TextBlock Text="{Binding PlacementCount}" />
