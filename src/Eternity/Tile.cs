@@ -2,10 +2,10 @@
 {
 	public class Tile(
 		int index,
-		int[] sides
+		ulong[] sides
 	)
 	{
 		public int Index => index;
-		public int[] Sides => sides;
+		public ulong[] Sides => sides;
 	}
 }

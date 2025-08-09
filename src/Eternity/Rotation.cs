@@ -17,7 +17,7 @@
 			Rotation.TwoSeventy
 		];
 
-		public static void Rotate(IReadOnlyList<int> edges, Rotation rotation, Span<int> result)
+		public static void Rotate(IReadOnlyList<ulong> edges, Rotation rotation, Span<ulong> result)
 		{
 			for (int i = 0; i < edges.Count; i++)
 			{

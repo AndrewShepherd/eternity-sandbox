@@ -11,15 +11,15 @@
 			var pc = listPlacements.Constraints.At(position).PatternConstraints;
 			var patterns = listPlacements.PieceSides[pieceIndex];
 			List<Rotation> result = new List<Rotation>();
-			int[] rp = new int[4];
+			ulong[] rp = new ulong[4];
 			foreach(var rotation in RotationExtensions.AllRotations)
 			{
 				RotationExtensions.Rotate(patterns, rotation, rp);
 				if (
-					pc.Left.Contains(rp[EdgeIndexes.Left])
-					&& pc.Top.Contains(rp[EdgeIndexes.Top])
-					&& pc.Right.Contains(rp[EdgeIndexes.Right])
-					&& pc.Bottom.Contains(rp[EdgeIndexes.Bottom])
+					(pc.Left & rp[EdgeIndexes.Left]) != 0
+					&& (pc.Top & rp[EdgeIndexes.Top]) != 0
+					&& (pc.Right & rp[EdgeIndexes.Right]) != 0
+					&& (pc.Bottom & rp[EdgeIndexes.Bottom]) != 0
 				)
 				{
 					result.Add(rotation);

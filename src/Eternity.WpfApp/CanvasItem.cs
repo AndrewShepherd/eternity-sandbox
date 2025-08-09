@@ -4,6 +4,7 @@ namespace Eternity.WpfApp
 	using System;
 	using System.Collections.Immutable;
 	using System.Data;
+	using System.Numerics;
 	using System.Windows.Media.Imaging;
 
 	public interface CanvasItem
@@ -73,10 +74,11 @@ namespace Eternity.WpfApp
 				return pieceSides.Select(
 					(pieceSideId, index) =>
 					{
+						int triangleImageIndex = BitOperations.TrailingZeroCount(pieceSideId);
 						// Not sure about the rotation
 						return new CanvasPieceItem
 						{
-							ImageSource = triangleImages[pieceSideId]!,
+							ImageSource = triangleImages[triangleImageIndex]!,
 							Height = imageHeight,
 							Left = left,
 							Top = top,
@@ -127,15 +129,16 @@ namespace Eternity.WpfApp
 
 			CanvasPieceItem? RenderFromPatternConstraints(
 				Position position,
-				ImmutableBitArray constraints,
+				ulong constraints,
 				int rotation
 			)
 			{
-				if (constraints.Count != 1)
+				if (BitOperations.PopCount(constraints) != 1)
 				{
 					return null;
 				}
-				var image = triangleImages[constraints.First()];
+				int triangleImageIndex = BitOperations.TrailingZeroCount(constraints);
+				var image = triangleImages[triangleImageIndex];
 				var left = position.X * pieceWidth;
 				var top = position.Y * pieceHeight;
 				return new CanvasPieceItem

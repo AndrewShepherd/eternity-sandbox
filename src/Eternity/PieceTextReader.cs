@@ -11,7 +11,7 @@ namespace Eternity
 {
 	public static class PieceTextReader
 	{
-		public static ImmutableArray<int>[] Parse(string source)
+		public static ImmutableArray<ulong>[] Parse(string source)
 		{
 			var regex = new Regex(@"\b([A-Z,a-z]{4})\b");
 			var allStrings = regex.Matches(source).Select(m => m.Groups[1].Value).ToArray();

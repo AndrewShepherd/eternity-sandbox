@@ -7,39 +7,39 @@
 
 	public static class ProtoPieceConversions
 	{
-		public static Eternity.Proto.Piece ConvertPieceSides(IReadOnlyList<int> pieceSides) =>
+		public static Eternity.Proto.Piece ConvertPieceSides(IReadOnlyList<ulong> pieceSides) =>
 			new()
 			{
-				Sides = (uint)pieceSides[0] << 24
-					| (uint)pieceSides[1] << 16
-					| (uint)pieceSides[2] << 8
-					| (uint)pieceSides[3],
+				Sides = (uint)BitOperations.TrailingZeroCount(pieceSides[0]) << 24
+					| (uint)BitOperations.TrailingZeroCount(pieceSides[1]) << 16
+					| (uint)BitOperations.TrailingZeroCount(pieceSides[2]) << 8
+					| (uint)BitOperations.TrailingZeroCount(pieceSides[3]),
 			};
 
-		public static IReadOnlyList<ImmutableArray<int>> ConvertProtoPieces(
+		public static IReadOnlyList<ImmutableArray<ulong>> ConvertProtoPieces(
 			RepeatedField<Proto.Piece> pieces
 		) =>
 			pieces.Select(
 				p =>
-					new[] {
-						(int)((p.Sides & 0xFF000000) >> 24),
-						(int)((p.Sides & 0x00FF0000) >> 16),
-						(int)((p.Sides & 0x0000FF00) >> 8),
-						(int)(p.Sides & 0x000000FF)
+					new ulong[] {
+						((ulong)1l) << (int)((p.Sides & 0xFF000000) >> 24),
+						(ulong)1l << (int)((p.Sides & 0x00FF0000) >> 16),
+						(ulong)1l << (int)((p.Sides & 0x0000FF00) >> 8),
+						(ulong)1l << (int)(p.Sides & 0x000000FF)
 					}.ToImmutableArray()
 			).ToArray();
 	}
 
 	public static class ProtoConversions
 	{
-		internal static Proto.BigInteger Convert(BigInteger bi) =>
+		public static Proto.BigInteger Convert(BigInteger bi) =>
 			new()
 			{
 				Bytes = Google.Protobuf.ByteString.CopyFrom(bi.ToByteArray()),
 			};
 
 		public static BigInteger Convert(Proto.BigInteger bi) =>
-			new BigInteger(bi.ToByteArray());
+			new BigInteger(bi.Bytes.ToByteArray());
 
 		private static Proto.Placement Convert(Placement p)
 		{
@@ -87,9 +87,16 @@
 			return result;
 		}
 
-		public static Placements Convert(Proto.Placements protoPlacements, IReadOnlyList<ImmutableArray<int>> pieceSides)
+		public static Placements Convert(
+			Proto.Placements protoPlacements, 
+			IReadOnlyList<ImmutableArray<ulong>> pieceSides
+		)
 		{
 			var placements = Placements.CreateInitial(pieceSides);
+			if (placements == null)
+			{
+				throw new Exception("Failed to create the initial placements from the piece sides");
+			}
 			foreach(var protoPlacement in protoPlacements.Items)
 			{
 				placements = placements.SetItem(

@@ -8,7 +8,7 @@
 		{
 		}
 
-		public IReadOnlyList<ImmutableArray<int>> PieceSides = [];
+		public IReadOnlyList<ImmutableArray<ulong>> PieceSides = [];
 
 		public static async Task<PuzzleEnvironment> Generate()
 		{

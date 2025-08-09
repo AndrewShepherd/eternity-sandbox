@@ -37,7 +37,7 @@
 
 		public IReadOnlyList<Placement> Values => _placements;
 
-		public required IReadOnlyList<ImmutableArray<int>> PieceSides { get; init; }
+		public required IReadOnlyList<ImmutableArray<ulong>> PieceSides { get; init; }
 
 		public required Dimensions Dimensions { get; init; }
 
@@ -46,7 +46,7 @@
 		{
 		}
 
-		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<int>> pieceSides)
+		public static Placements CreateInitial(IReadOnlyList<ImmutableArray<ulong>> pieceSides)
 		{
 			Constraints? initialConstraints = Constraints.Generate(pieceSides);
 

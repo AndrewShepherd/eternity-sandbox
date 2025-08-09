@@ -14,10 +14,14 @@ namespace Eternity
 				_ => c - 'B' + 24
 			};
 
-		public static int[] ConvertToSides(string s) =>
+		private static ulong IntToFlag(int n) => ((ulong)1) << n;
+
+		public static ulong[] ConvertToSides(string s) =>
 			s.ToCharArray()
 			.Select(
 				CharToNumber
+			).Select(
+				IntToFlag
 			).ToArray();
 		private static IEnumerable<Tile> ExtractPieces(JsonDocument document)
 		{
