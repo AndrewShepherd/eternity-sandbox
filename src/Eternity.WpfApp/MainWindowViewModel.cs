@@ -3,7 +3,6 @@
 	using Prism.Commands;
 	using ReactiveUI;
 	using System.Collections.Generic;
-	using System.ComponentModel;
 	using System.Reactive.Subjects;
 	using System.Reactive.Linq;
 	using System.Windows.Input;
@@ -13,6 +12,8 @@
 
 	using static Eternity.Sequence;
 	using System.Numerics;
+	using System.IO;
+	using Google.Protobuf;
 
 	internal abstract class RunningState();
 
@@ -212,13 +213,20 @@
 
 		public void SetPieceSides(IReadOnlyList<ImmutableArray<int>> pieceSides)
 		{
-			_sequenceSpecs = new SequenceSpecs(pieceSides.Count);
-			_solutionState = new SolutionState(pieceSides);
-			_solutionState._treeNode = _solutionState._treeNode.Progress(
+			var solutionState = new SolutionState(pieceSides);
+			solutionState._treeNode = solutionState._treeNode.Progress(
 				StackEntryExtensions.ProgressForwards,
-				_solutionState._pieceSides
+				solutionState._pieceSides
 			);
+			SetSolutionState(solutionState);
+		}
+
+		private void SetSolutionState(SolutionState newSolutionState)
+		{
+			_sequenceSpecs = new SequenceSpecs(newSolutionState._pieceSides.Count);
+			_solutionState = newSolutionState;
 			this._rootTreeNode.OnNext(_solutionState._treeNode);
+
 		}
 
 		private async void SetInitialData()
@@ -320,6 +328,23 @@
 			}
 		}
 
+		internal void SaveRunningState(Stream outputStream)
+		{
+			var solutionState = _solutionState;
+			if (solutionState == null)
+			{
+				throw new Exception("No solution state to save");
+			}
+			var runningState = SolutionStateProto.Convert(solutionState);
+			outputStream.Write(runningState.ToByteArray());
+		}
+
+		internal void LoadRunningState(Stream inputStream)
+		{
+			var runningStateProto = Proto.RunningState.Parser.ParseFrom(inputStream);
+			SolutionState solutionState = SolutionStateProto.Convert(runningStateProto);
+			this.SetSolutionState(solutionState);
+		}
 
 		public MainWindowViewModel()
 		{

@@ -23,6 +23,10 @@ namespace Eternity.WpfApp
 	{
 		public static RoutedCommand ExitCommand = new();
 
+		public static RoutedCommand SaveRunningStateCommand = new();
+
+		public static RoutedCommand LoadRunningStateCommand = new();
+
 
 		public MainWindow()
 		{
@@ -55,6 +59,40 @@ namespace Eternity.WpfApp
 					vm.SetPieceSides(pieces);
 				}
 
+			}
+		}
+
+		private void SaveRunningStateCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+		{
+			SaveFileDialog saveFileDialog = new();
+			if (saveFileDialog.ShowDialog() == true)
+			{
+				using (var fileStream = File.OpenWrite(saveFileDialog.FileName))
+				{
+					var vm = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
+					if (vm != null)
+					{
+						vm.SaveRunningState(fileStream);
+					}
+					fileStream.Flush();
+					fileStream.Close();
+				}
+			}
+		}
+
+		private void LoadRunningStateCommand_Executed(object sender, ExecutedRoutedEventArgs args)
+		{
+			OpenFileDialog openFileDialog = new();
+			if (openFileDialog.ShowDialog() == true)
+			{
+				using (var fileStream = File.OpenRead(openFileDialog.FileName))
+				{
+					var vm = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
+					if (vm != null)
+					{
+						vm.LoadRunningState(fileStream);
+					}
+				}
 			}
 		}
 	}

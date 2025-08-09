@@ -105,7 +105,7 @@
 					NodesExplored = accumulatedNodesExplored + 1,
 					StackEntry = this.StackEntry,
 					TotalNodesEstimate = calculatedEstimate + 1,
-					Solutions = solutions.ToList()
+					Solutions = solutions.ToList(),
 				};
 			}
 			else

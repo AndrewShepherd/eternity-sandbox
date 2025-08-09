@@ -24,6 +24,15 @@
 			Command="{x:Static ApplicationCommands.Open}"
 			Executed="OpenCommand_Executed"
 			/>
+		<CommandBinding
+			Command="{x:Static local:MainWindow.SaveRunningStateCommand}"
+			Executed="SaveRunningStateCommand_Executed"
+		/>
+		<CommandBinding
+			Command="{x:Static local:MainWindow.LoadRunningStateCommand}"
+			Executed="LoadRunningStateCommand_Executed"
+		/>
+
 	</Window.CommandBindings>
 	<Grid x:Name="MainGrid" DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.RowDefinitions>
@@ -36,7 +45,9 @@
 		</Grid.ColumnDefinitions>
 		<Menu Grid.Row="0" Grid.ColumnSpan="2">
 			<MenuItem Header="_File">
-				<MenuItem Header="_Open" Command="{x:Static ApplicationCommands.Open}" />
+				<MenuItem Header="_Open Board Configuration" Command="{x:Static ApplicationCommands.Open}" />
+				<MenuItem Header="_Save Running State" Command="{x:Static local:MainWindow.SaveRunningStateCommand}" />
+				<MenuItem Header="_Load Running State" Command="{x:Static local:MainWindow.LoadRunningStateCommand}" />
 				<MenuItem Header="E_xit" Command="{x:Static local:MainWindow.ExitCommand}" />
 			</MenuItem>
 		</Menu>

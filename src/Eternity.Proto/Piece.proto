@@ -6,5 +6,6 @@ package Eternity.Proto;
 
 message Piece
 {
-	fixed32 sides = 1
+	// Each size is one byte
+	fixed32 sides = 1;
 }

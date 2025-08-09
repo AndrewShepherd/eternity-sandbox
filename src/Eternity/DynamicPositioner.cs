@@ -101,4 +101,10 @@
 			);
 		}
 	}
+
+	public static class DefaultPositioner
+	{
+		public static IPositioner Generate(Dimensions dimensions) =>
+			new DynamicPositionerAdjacentsOnly(dimensions);
+	}
 }

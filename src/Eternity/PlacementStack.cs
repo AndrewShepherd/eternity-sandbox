@@ -66,7 +66,7 @@
 			Placements initialPlacements = Placements.CreateInitial(
 				pieceSides
 			);
-			IPositioner positioner = new DynamicPositionerAdjacentsOnly(initialPlacements.Dimensions);
+			IPositioner positioner = DefaultPositioner.Generate(initialPlacements.Dimensions);
 			// Push the first value
 			(var firstPosition, positioner) = positioner.GetNext(initialPlacements.Constraints);
 			var availablePieces = initialPlacements.Constraints.At(firstPosition).Pieces;
@@ -126,7 +126,7 @@
 			}
 		}
 
-		private static TreeNode GenerateChildNode(PartiallyExploredTreeNode setn, int index)
+		public static TreeNode GenerateChildNode(PartiallyExploredTreeNode setn, int index)
 		{
 			var thisConstraints = setn.StackEntry.Placements!.Constraints;
 			(var nextPosition, var nextPositioner) = setn.StackEntry.Positioner.GetNext(thisConstraints);

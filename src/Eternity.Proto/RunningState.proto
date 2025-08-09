@@ -1,0 +1,13 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+
+package Eternity.Proto;
+
+import "Piece.Proto";
+import "TreeNode.Proto";
+
+message RunningState {
+	repeated Piece Pieces = 1;
+	TreeNode Tree = 2;
+}
