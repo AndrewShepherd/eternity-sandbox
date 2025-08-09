@@ -211,7 +211,7 @@
 		private SequenceSpecs _sequenceSpecs = new SequenceSpecs(256);
 
 
-		public void SetPieceSides(IReadOnlyList<ImmutableArray<ulong>> pieceSides)
+		public void SetPieceSides(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
 		{
 			var solutionState = new SolutionState(pieceSides);
 			solutionState._treeNode = solutionState._treeNode.Progress(

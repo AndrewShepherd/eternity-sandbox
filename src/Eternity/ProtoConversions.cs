@@ -16,7 +16,7 @@
 					| (uint)BitOperations.TrailingZeroCount(pieceSides[3]),
 			};
 
-		public static IReadOnlyList<ImmutableArray<ulong>> ConvertProtoPieces(
+		public static IReadOnlyList<IReadOnlyList<ulong>> ConvertProtoPieces(
 			RepeatedField<Proto.Piece> pieces
 		) =>
 			pieces.Select(
@@ -26,7 +26,7 @@
 						(ulong)1l << (int)((p.Sides & 0x00FF0000) >> 16),
 						(ulong)1l << (int)((p.Sides & 0x0000FF00) >> 8),
 						(ulong)1l << (int)(p.Sides & 0x000000FF)
-					}.ToImmutableArray()
+					}
 			).ToArray();
 	}
 
@@ -89,7 +89,7 @@
 
 		public static Placements Convert(
 			Proto.Placements protoPlacements, 
-			IReadOnlyList<ImmutableArray<ulong>> pieceSides
+			IReadOnlyList<IReadOnlyList<ulong>> pieceSides
 		)
 		{
 			var placements = Placements.CreateInitial(pieceSides);

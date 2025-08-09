@@ -31,7 +31,7 @@ namespace Eternity
 			};
 		}
 
-		public static Constraints? Generate(IReadOnlyList<ImmutableArray<ulong>> pieceSides)
+		public static Constraints? Generate(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
 		{
 			var sqrt = (int)Math.Round(Math.Sqrt(pieceSides.Count));
 			var dimensions = new Dimensions(sqrt, sqrt);

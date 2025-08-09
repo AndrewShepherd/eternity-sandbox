@@ -7,10 +7,10 @@
 	{
 		public TreeNode _treeNode = UnexploredTreeNode.Instance;
 
-		public readonly IReadOnlyList<ImmutableArray<ulong>> _pieceSides;
+		public readonly IReadOnlyList<IReadOnlyList<ulong>> _pieceSides;
 
 
-		public SolutionState(IReadOnlyList<ImmutableArray<ulong>> pieceSides)
+		public SolutionState(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
 		{
 			_pieceSides = pieceSides;
 		}
@@ -32,7 +32,10 @@
 			return runningState;
 		}
 
-		private static FullyExploredTreeNode Convert(Proto.FullyExploredTreeNode fetn, IReadOnlyList<ImmutableArray<ulong>> pieces) =>
+		private static FullyExploredTreeNode Convert(
+			Proto.FullyExploredTreeNode fetn,
+			IReadOnlyList<IReadOnlyList<ulong>> pieces
+		) =>
 			new FullyExploredTreeNode
 			{
 				NodesExplored = ProtoConversions.Convert(fetn.NodesExplored),
@@ -41,7 +44,10 @@
 					).ToList(),
 			};
 
-		private static TreeNode BuildTree(Proto.TreeNode tree, IReadOnlyList<ImmutableArray<ulong>> pieces)
+		private static TreeNode BuildTree(
+			Proto.TreeNode tree,
+			IReadOnlyList<IReadOnlyList<ulong>> pieces
+		)
 		{
 			if (tree.InstanceCase == Proto.TreeNode.InstanceOneofCase.Unexplored)
 			{
@@ -99,7 +105,7 @@
 			PartiallyExploredTreeNode petn,
 			Proto.TreeNode protoChild,
 			int index,
-			IReadOnlyList<ImmutableArray<ulong>> pieces
+			IReadOnlyList<IReadOnlyList<ulong>> pieces
 		)
 		{
 			if (protoChild.InstanceCase == Proto.TreeNode.InstanceOneofCase.UnsuccessfulPlacement)

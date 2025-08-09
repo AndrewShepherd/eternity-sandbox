@@ -60,7 +60,7 @@
 
 		public static TreeNode CreateInitialStack(
 			Func<int?, int, int?> progressIndex,
-			IReadOnlyList<ImmutableArray<ulong>> pieceSides
+			IReadOnlyList<IReadOnlyList<ulong>> pieceSides
 		)
 		{
 			Placements initialPlacements = Placements.CreateInitial(
@@ -241,7 +241,7 @@
 		public static TreeNode Progress(
 			this TreeNode treeNode,
 			Func<int?, int, int?> progressIndex,
-			IReadOnlyList<ImmutableArray<ulong>> pieceSides
+			IReadOnlyList<IReadOnlyList<ulong>> pieceSides
 		)
 		{
 			if (treeNode is UnexploredTreeNode)

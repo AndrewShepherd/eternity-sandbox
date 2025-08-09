@@ -1,6 +1,7 @@
 ﻿
 namespace Eternity
 {
+	using System.Collections.Generic;
 	using System.Collections.Immutable;
 	using System.Data;
 
@@ -62,7 +63,7 @@ namespace Eternity
 			Right = SquareConstraintExtensions.AllPatterns
 		};
 
-		public required IReadOnlyList<ImmutableArray<ulong>> PiecePatternLookup { get; init; }
+		public required PreRotatedPatternLookup PiecePatternLookup { get; init; }
 		public SlotConstraint()
 		{
 		}
@@ -78,11 +79,10 @@ namespace Eternity
 				Right = 0,
 				Top = 0,
 			};
-			var patterns = this.PiecePatternLookup[placement.PieceIndex];
-			var rotated = new ulong[4];
-			foreach (var rotation in placement.Rotations)
+			var patterns = this.PiecePatternLookup.ForPiece(placement.PieceIndex);
+			for(int i = 0; i < 16; i += 4)
 			{
-				RotationExtensions.Rotate(patterns, rotation, rotated);
+				Span<ulong> rotated = patterns.Slice(i, 4);
 				newPatternConstraints = new MultiPatternConstraints
 				{
 					Left = newPatternConstraints.Left | rotated[EdgeIndexes.Left],
@@ -101,20 +101,19 @@ namespace Eternity
 		private static MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
 			IEnumerable<int> availablePieces,
 			MultiPatternConstraints currentConstraints,
-			IReadOnlyList<ImmutableArray<ulong>> piecePatternLookup
+			PreRotatedPatternLookup piecePatternLookup
 		)
 		{
 			ulong top = 0;
 			ulong bottom = 0;
 			ulong left = 0;
 			ulong right = 0;
-			ulong[] rotatedPattern = new ulong[4];
 			foreach (var pieceIndex in availablePieces)
 			{
-				var piecePattern = piecePatternLookup[pieceIndex];
-				foreach (var rotation in RotationExtensions.AllRotations)
+				var piecePattern = piecePatternLookup.ForPiece(pieceIndex);
+				for(int i = 0; i < 16; i +=4)
 				{
-					RotationExtensions.Rotate(piecePattern, rotation, rotatedPattern);
+					var rotatedPattern = piecePattern.Slice(i, 4);
 					if (
 						(currentConstraints.Top & rotatedPattern[EdgeIndexes.Top]) != 0
 						&& (currentConstraints.Left & rotatedPattern[EdgeIndexes.Left]) != 0
@@ -156,14 +155,13 @@ namespace Eternity
 		)
 		{
 			var rv = hashSet;
-			ulong[] rotatedPattern = new ulong[4];
 			foreach (var pieceIndex in hashSet)
 			{
-				var piecePattern = this.PiecePatternLookup[pieceIndex];
+				var patterns = this.PiecePatternLookup.ForPiece(pieceIndex);
 				bool approved = false;
-				foreach (var rotation in RotationExtensions.AllRotations)
+				for(int i = 0; i < 16; i += 4)
 				{
-					RotationExtensions.Rotate(piecePattern, rotation, rotatedPattern);
+					Span<ulong> rotatedPattern = patterns.Slice(i, 4);
 					if (
 						(c.Top & rotatedPattern[EdgeIndexes.Top]) != 0
 						&& (c.Left & rotatedPattern[EdgeIndexes.Left]) != 0
@@ -609,7 +607,7 @@ namespace Eternity
 			return anyChanges ? constraints.ToImmutableArray() : origionalConstraints;
 		}
 
-		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<ImmutableArray<ulong>> pieceSides)
+		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
 		{
 			var constraintsArray = new SlotConstraint[pieceSides.Count];
 
@@ -618,7 +616,7 @@ namespace Eternity
 			var initialConstraint = new SlotConstraint
 			{
 				Pieces = AllPieces,
-				PiecePatternLookup = pieceSides
+				PiecePatternLookup = PreRotatedPatternLookup.Generate(pieceSides)
 			};
 			for (int placementIndex = 0; placementIndex < constraintsArray.Length; ++placementIndex)
 			{
