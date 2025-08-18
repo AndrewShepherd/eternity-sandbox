@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Tests", "Eternity.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Proto", "Eternity.Proto\Eternity.Proto.csproj", "{2829367E-C504-4260-A76D-1C97843EECDB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Server.WpfApp", "Eternity.Server.WpfApp\Eternity.Server.WpfApp.csproj", "{C4437E5E-9F15-4BF2-82E9-2C07A3AD8EBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Worker.WpfApp", "Eternity.Worker.WpfApp\Eternity.Worker.WpfApp.csproj", "{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,14 @@ Global
 		{2829367E-C504-4260-A76D-1C97843EECDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2829367E-C504-4260-A76D-1C97843EECDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2829367E-C504-4260-A76D-1C97843EECDB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4437E5E-9F15-4BF2-82E9-2C07A3AD8EBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4437E5E-9F15-4BF2-82E9-2C07A3AD8EBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4437E5E-9F15-4BF2-82E9-2C07A3AD8EBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4437E5E-9F15-4BF2-82E9-2C07A3AD8EBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
