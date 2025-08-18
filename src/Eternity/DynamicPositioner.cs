@@ -1,110 +1,109 @@
-﻿namespace Eternity
+﻿namespace Eternity;
+
+using System.Collections.Immutable;
+using System.Data;
+
+public class DynamicPositioner(Dimensions dimensions) : IPositioner
 {
-	using System.Collections.Immutable;
-	using System.Data;
+	private ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
 
-	public class DynamicPositioner(Dimensions dimensions) : IPositioner
+	internal static Position? Select(IEnumerable<Position> positions, Constraints constraints)
 	{
-		private ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
-
-		internal static Position? Select(IEnumerable<Position> positions, Constraints constraints)
+		Position? result = null;
+		foreach (var position in positions)
 		{
-			Position? result = null;
-			foreach (var position in positions)
+			if (result == null)
 			{
-				if (result == null)
+				result = position;
+				var c = constraints.At(position);
+				if (c.Pieces.Count == 1)
 				{
-					result = position;
-					var c = constraints.At(position);
-					if (c.Pieces.Count == 1)
-					{
-						break;
-					}
-					continue;
+					break;
 				}
-				var reigningConstraint = constraints.At(result);
-				var newConstraint = constraints.At(position);
+				continue;
+			}
+			var reigningConstraint = constraints.At(result);
+			var newConstraint = constraints.At(position);
 
-				if (newConstraint.Pieces.Count < reigningConstraint.Pieces.Count)
+			if (newConstraint.Pieces.Count < reigningConstraint.Pieces.Count)
+			{
+				result = position;
+				if (newConstraint.Pieces.Count == 1)
 				{
-					result = position;
-					if (newConstraint.Pieces.Count == 1)
-					{
-						break;
-					}
+					break;
 				}
 			}
-			return result;
+		}
+		return result;
+	}
+
+	(Position, IPositioner) IPositioner.GetNext(Constraints constraints)
+	{
+		Position? result = Select(
+			dimensions.GetAllPositions().Where(p => !_returnedAlready.Contains(p)),
+			constraints
+		);
+		if (result != null)
+		{
+			return (
+				result,
+				new DynamicPositioner(dimensions)
+				{
+					_returnedAlready = this._returnedAlready.Add(result)
+				}
+			);
+		}
+		else
+		{
+			throw new Exception("Invoked dynamic positioner next when no more items");
 		}
 
-		(Position, IPositioner) IPositioner.GetNext(Constraints constraints)
-		{
-			Position? result = Select(
+	}
+}
+
+
+public class DynamicPositionerAdjacentsOnly(Dimensions dimensions) : IPositioner
+{
+	internal ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
+	internal ImmutableSortedSet<Position> _adjacentPositions = ImmutableSortedSet<Position>.Empty;
+
+	(Position, IPositioner) IPositioner.GetNext(Constraints constraints)
+	{
+		Position? nextPosition = _adjacentPositions.IsEmpty
+			? DynamicPositioner.Select(
 				dimensions.GetAllPositions().Where(p => !_returnedAlready.Contains(p)),
 				constraints
+			)
+			: DynamicPositioner.Select(
+				_adjacentPositions,
+				constraints
 			);
-			if (result != null)
-			{
-				return (
-					result,
-					new DynamicPositioner(dimensions)
-					{
-						_returnedAlready = this._returnedAlready.Add(result)
-					}
-				);
-			}
-			else
-			{
-				throw new Exception("Invoked dynamic positioner next when no more items");
-			}
-
-		}
-	}
-
-
-	public class DynamicPositionerAdjacentsOnly(Dimensions dimensions) : IPositioner
-	{
-		internal ImmutableHashSet<Position> _returnedAlready = ImmutableHashSet<Position>.Empty;
-		internal ImmutableSortedSet<Position> _adjacentPositions = ImmutableSortedSet<Position>.Empty;
-
-		(Position, IPositioner) IPositioner.GetNext(Constraints constraints)
+		if (nextPosition == null)
 		{
-			Position? nextPosition = _adjacentPositions.IsEmpty
-				? DynamicPositioner.Select(
-					dimensions.GetAllPositions().Where(p => !_returnedAlready.Contains(p)),
-					constraints
-				)
-				: DynamicPositioner.Select(
-					_adjacentPositions,
-					constraints
-				);
-			if (nextPosition == null)
-			{
-				throw new Exception("Invoked dynamic positioner next when no more items");
-			}
-			Position[] unfilteredAdjacents = [
-				new(nextPosition.X - 1, nextPosition.Y),
-				new(nextPosition.X + 1, nextPosition.Y),
-				new(nextPosition.X, nextPosition.Y - 1),
-				new(nextPosition.X, nextPosition.Y + 1)
-			];
-			var filteredAdjacents = unfilteredAdjacents.Where(
-				p => dimensions.Contains(p) && !_returnedAlready.Contains(p)
-			);
-			return (
-				nextPosition,
-				new DynamicPositionerAdjacentsOnly(dimensions)
-				{
-					_adjacentPositions = this._adjacentPositions.Union(filteredAdjacents).Remove(nextPosition),
-					_returnedAlready = this._returnedAlready.Add(nextPosition),
-				}
-			);
+			throw new Exception("Invoked dynamic positioner next when no more items");
 		}
+		Position[] unfilteredAdjacents = [
+			new(nextPosition.X - 1, nextPosition.Y),
+			new(nextPosition.X + 1, nextPosition.Y),
+			new(nextPosition.X, nextPosition.Y - 1),
+			new(nextPosition.X, nextPosition.Y + 1)
+		];
+		var filteredAdjacents = unfilteredAdjacents.Where(
+			p => dimensions.Contains(p) && !_returnedAlready.Contains(p)
+		);
+		return (
+			nextPosition,
+			new DynamicPositionerAdjacentsOnly(dimensions)
+			{
+				_adjacentPositions = this._adjacentPositions.Union(filteredAdjacents).Remove(nextPosition),
+				_returnedAlready = this._returnedAlready.Add(nextPosition),
+			}
+		);
 	}
+}
 
-	public static class DefaultPositioner
-	{
-		public static IPositioner Generate(Dimensions dimensions) =>
-			new DynamicPositionerAdjacentsOnly(dimensions);
-	}
+public static class DefaultPositioner
+{
+	public static IPositioner Generate(Dimensions dimensions) =>
+		new DynamicPositionerAdjacentsOnly(dimensions);
 }

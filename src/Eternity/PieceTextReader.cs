@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
+﻿namespace Eternity;
 
-namespace Eternity
+using System.Text.RegularExpressions;
+
+public static partial class PieceTextReader
 {
-	public static class PieceTextReader
+	public static IReadOnlyList<ulong>[] Parse(string source)
 	{
-		public static IReadOnlyList<ulong>[] Parse(string source)
-		{
-			var regex = new Regex(@"\b([A-Z,a-z]{4})\b");
-			var allStrings = regex.Matches(source).Select(m => m.Groups[1].Value).ToArray();
-			return allStrings.Select(
-					(s, i) => PuzzleProvider.ConvertToSides(s).ToList()
-				).ToArray();
-		}
+		var allStrings = RegexFourLetters.Matches(source).Select(m => m.Groups[1].Value).ToArray();
+		return allStrings.Select(
+				(s, i) => PuzzleProvider.ConvertToSides(s).ToList()
+			).ToArray();
 	}
+
+	[GeneratedRegex(@"\b([A-Z,a-z]{4})\b")]
+	private static partial Regex RegexFourLetters { get; }
 }

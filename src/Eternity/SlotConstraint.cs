@@ -1,602 +1,601 @@
 ﻿
-namespace Eternity
-{
-	using System.Collections.Generic;
-	using System.Collections.Immutable;
-	using System.Data;
+namespace Eternity;
 
-	public static class ImmutableHashSetExtensions
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Data;
+
+public static class ImmutableHashSetExtensions
+{
+	public static ImmutableBitArray Constrain(this ImmutableBitArray s1, ImmutableBitArray c) =>
+		s1.Intersect(c);
+}
+
+public record MultiPatternConstraints
+{
+	public required ulong Left;
+	public required ulong Right;
+	public required ulong Top;
+	public required ulong Bottom;
+
+	public readonly static MultiPatternConstraints Never = new()
 	{
-		public static ImmutableBitArray Constrain(this ImmutableBitArray s1, ImmutableBitArray c) =>
-			s1.Intersect(c);
+		Left = 0,
+		Bottom = 0,
+		Right = 0,
+		Top = 0,
+	};
+}
+
+public static class MultiPatterConstraintsExtensions
+{
+	public static bool IsEquivalentTo(
+		this MultiPatternConstraints left,
+		MultiPatternConstraints right
+	) =>
+		left.Left == right.Left
+		&& left.Top == right.Top
+		&& left.Right == right.Right
+		&& left.Bottom == right.Bottom;
+
+	public static MultiPatternConstraints Intersect(
+		this MultiPatternConstraints m1,
+		MultiPatternConstraints m2
+	) =>
+		new MultiPatternConstraints
+		{
+			Left = m1.Left & m2.Left,
+			Right = m1.Right & m2.Right,
+			Top = m1.Top & m2.Top,
+			Bottom = m1.Bottom & m2.Bottom,
+		};
+}
+
+public record class SlotConstraint
+{
+	public required ImmutableBitArray Pieces { get; init; }
+
+	public MultiPatternConstraints PatternConstraints = new()
+	{
+		Bottom = SquareConstraintExtensions.AllPatterns,
+		Top = SquareConstraintExtensions.AllPatterns,
+		Left = SquareConstraintExtensions.AllPatterns,
+		Right = SquareConstraintExtensions.AllPatterns
+	};
+
+	public required PreRotatedPatternLookup PiecePatternLookup { get; init; }
+	public SlotConstraint()
+	{
 	}
 
-	public record MultiPatternConstraints
+	public SlotConstraint SetPlacement(
+		Placement placement
+	)
 	{
-		public required ulong Left;
-		public required ulong Right;
-		public required ulong Top;
-		public required ulong Bottom;
-
-		public readonly static MultiPatternConstraints Never = new()
+		var newPatternConstraints = new MultiPatternConstraints
 		{
 			Left = 0,
 			Bottom = 0,
 			Right = 0,
 			Top = 0,
 		};
-	}
-
-	public static class MultiPatterConstraintsExtensions
-	{
-		public static bool IsEquivalentTo(
-			this MultiPatternConstraints left,
-			MultiPatternConstraints right
-		) =>
-			left.Left == right.Left
-			&& left.Top == right.Top
-			&& left.Right == right.Right
-			&& left.Bottom == right.Bottom;
-
-		public static MultiPatternConstraints Intersect(
-			this MultiPatternConstraints m1,
-			MultiPatternConstraints m2
-		) =>
-			new MultiPatternConstraints
+		var patterns = this.PiecePatternLookup.ForPiece(placement.PieceIndex);
+		for(int i = 0; i < 16; i += 4)
+		{
+			Span<ulong> rotated = patterns.Slice(i, 4);
+			newPatternConstraints = new MultiPatternConstraints
 			{
-				Left = m1.Left & m2.Left,
-				Right = m1.Right & m2.Right,
-				Top = m1.Top & m2.Top,
-				Bottom = m1.Bottom & m2.Bottom,
+				Left = newPatternConstraints.Left | rotated[EdgeIndexes.Left],
+				Bottom = newPatternConstraints.Bottom | rotated[EdgeIndexes.Bottom],
+				Top = newPatternConstraints.Top | rotated[EdgeIndexes.Top],
+				Right = newPatternConstraints.Right | rotated[EdgeIndexes.Right]
 			};
-	}
-
-	public record class SlotConstraint
-	{
-		public required ImmutableBitArray Pieces { get; init; }
-
-		public MultiPatternConstraints PatternConstraints = new()
-		{
-			Bottom = SquareConstraintExtensions.AllPatterns,
-			Top = SquareConstraintExtensions.AllPatterns,
-			Left = SquareConstraintExtensions.AllPatterns,
-			Right = SquareConstraintExtensions.AllPatterns
-		};
-
-		public required PreRotatedPatternLookup PiecePatternLookup { get; init; }
-		public SlotConstraint()
-		{
 		}
-
-		public SlotConstraint SetPlacement(
-			Placement placement
-		)
+		return this with
 		{
-			var newPatternConstraints = new MultiPatternConstraints
+			Pieces = ImmutableBitArray.SingleValue(placement.PieceIndex),
+			PatternConstraints = newPatternConstraints.Intersect(this.PatternConstraints)
+		};
+	}
+
+	private static MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
+		IEnumerable<int> availablePieces,
+		MultiPatternConstraints currentConstraints,
+		PreRotatedPatternLookup piecePatternLookup
+	)
+	{
+		ulong top = 0;
+		ulong bottom = 0;
+		ulong left = 0;
+		ulong right = 0;
+		foreach (var pieceIndex in availablePieces)
+		{
+			var piecePattern = piecePatternLookup.ForPiece(pieceIndex);
+			for(int i = 0; i < 16; i +=4)
 			{
-				Left = 0,
-				Bottom = 0,
-				Right = 0,
-				Top = 0,
-			};
-			var patterns = this.PiecePatternLookup.ForPiece(placement.PieceIndex);
+				var rotatedPattern = piecePattern.Slice(i, 4);
+				if (
+					(currentConstraints.Top & rotatedPattern[EdgeIndexes.Top]) != 0
+					&& (currentConstraints.Left & rotatedPattern[EdgeIndexes.Left]) != 0
+					&& (currentConstraints.Bottom & rotatedPattern[EdgeIndexes.Bottom]) != 0
+					&& (currentConstraints.Right & rotatedPattern[EdgeIndexes.Right]) != 0
+				)
+				{
+					top |= rotatedPattern[EdgeIndexes.Top];
+					bottom |= rotatedPattern[EdgeIndexes.Bottom];
+					left |= rotatedPattern[EdgeIndexes.Left];
+					right |= rotatedPattern[EdgeIndexes.Right];
+					if (
+						(top == currentConstraints.Top)
+						&&
+						(left == currentConstraints.Left)
+						&&
+						(right == currentConstraints.Right)
+						&&
+						(bottom == currentConstraints.Bottom)
+					)
+					{
+						return currentConstraints;
+					}
+				}
+			}
+		}
+		return currentConstraints with
+		{
+			Bottom = currentConstraints.Bottom & bottom,
+			Top = currentConstraints.Top & top,
+			Left = currentConstraints.Left & left,
+			Right = currentConstraints.Right & right,
+		};
+	}
+
+	private ImmutableBitArray FilterSetBasedOnPatterns(
+		ImmutableBitArray hashSet,
+		MultiPatternConstraints c
+	)
+	{
+		var rv = hashSet;
+		foreach (var pieceIndex in hashSet)
+		{
+			var patterns = this.PiecePatternLookup.ForPiece(pieceIndex);
+			bool approved = false;
 			for(int i = 0; i < 16; i += 4)
 			{
-				Span<ulong> rotated = patterns.Slice(i, 4);
-				newPatternConstraints = new MultiPatternConstraints
+				Span<ulong> rotatedPattern = patterns.Slice(i, 4);
+				if (
+					(c.Top & rotatedPattern[EdgeIndexes.Top]) != 0
+					&& (c.Left & rotatedPattern[EdgeIndexes.Left]) != 0
+					&& (c.Bottom & rotatedPattern[EdgeIndexes.Bottom]) != 0
+					&& (c.Right & rotatedPattern[EdgeIndexes.Right]) != 0
+				)
 				{
-					Left = newPatternConstraints.Left | rotated[EdgeIndexes.Left],
-					Bottom = newPatternConstraints.Bottom | rotated[EdgeIndexes.Bottom],
-					Top = newPatternConstraints.Top | rotated[EdgeIndexes.Top],
-					Right = newPatternConstraints.Right | rotated[EdgeIndexes.Right]
-				};
-			}
-			return this with
-			{
-				Pieces = ImmutableBitArray.SingleValue(placement.PieceIndex),
-				PatternConstraints = newPatternConstraints.Intersect(this.PatternConstraints)
-			};
-		}
-
-		private static MultiPatternConstraints AdjustPatternConstraintsBasedOnAvailablePieces(
-			IEnumerable<int> availablePieces,
-			MultiPatternConstraints currentConstraints,
-			PreRotatedPatternLookup piecePatternLookup
-		)
-		{
-			ulong top = 0;
-			ulong bottom = 0;
-			ulong left = 0;
-			ulong right = 0;
-			foreach (var pieceIndex in availablePieces)
-			{
-				var piecePattern = piecePatternLookup.ForPiece(pieceIndex);
-				for(int i = 0; i < 16; i +=4)
-				{
-					var rotatedPattern = piecePattern.Slice(i, 4);
-					if (
-						(currentConstraints.Top & rotatedPattern[EdgeIndexes.Top]) != 0
-						&& (currentConstraints.Left & rotatedPattern[EdgeIndexes.Left]) != 0
-						&& (currentConstraints.Bottom & rotatedPattern[EdgeIndexes.Bottom]) != 0
-						&& (currentConstraints.Right & rotatedPattern[EdgeIndexes.Right]) != 0
-					)
-					{
-						top |= rotatedPattern[EdgeIndexes.Top];
-						bottom |= rotatedPattern[EdgeIndexes.Bottom];
-						left |= rotatedPattern[EdgeIndexes.Left];
-						right |= rotatedPattern[EdgeIndexes.Right];
-						if (
-							(top == currentConstraints.Top)
-							&&
-							(left == currentConstraints.Left)
-							&&
-							(right == currentConstraints.Right)
-							&&
-							(bottom == currentConstraints.Bottom)
-						)
-						{
-							return currentConstraints;
-						}
-					}
+					approved = true;
+					break;
 				}
 			}
-			return currentConstraints with
+			if (!approved)
 			{
-				Bottom = currentConstraints.Bottom & bottom,
-				Top = currentConstraints.Top & top,
-				Left = currentConstraints.Left & left,
-				Right = currentConstraints.Right & right,
-			};
-		}
-
-		private ImmutableBitArray FilterSetBasedOnPatterns(
-			ImmutableBitArray hashSet,
-			MultiPatternConstraints c
-		)
-		{
-			var rv = hashSet;
-			foreach (var pieceIndex in hashSet)
-			{
-				var patterns = this.PiecePatternLookup.ForPiece(pieceIndex);
-				bool approved = false;
-				for(int i = 0; i < 16; i += 4)
-				{
-					Span<ulong> rotatedPattern = patterns.Slice(i, 4);
-					if (
-						(c.Top & rotatedPattern[EdgeIndexes.Top]) != 0
-						&& (c.Left & rotatedPattern[EdgeIndexes.Left]) != 0
-						&& (c.Bottom & rotatedPattern[EdgeIndexes.Bottom]) != 0
-						&& (c.Right & rotatedPattern[EdgeIndexes.Right]) != 0
-					)
-					{
-						approved = true;
-						break;
-					}
-				}
-				if (!approved)
-				{
-					rv = rv.Remove(pieceIndex);
-				}
-			}
-			return rv;
-		}
-
-		private(
-			MultiPatternConstraints,
-			ImmutableBitArray
-		) UpdatePatternConstraintsBasedOnPiecesRecursive(
-			MultiPatternConstraints patternContraints,
-			ImmutableBitArray pieces
-		)
-		{
-			var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
-				pieces,
-				patternContraints,
-				this.PiecePatternLookup
-			);
-			if (newConstraints.IsEquivalentTo(patternContraints))
-			{
-				return (
-					patternContraints, 
-					FilterSetBasedOnPatterns(pieces, patternContraints)
-				);
-			}
-			else
-			{
-				return UpdatePiecesBasedOnPatternConstraintsRecursive(
-					newConstraints,
-					pieces
-				);
+				rv = rv.Remove(pieceIndex);
 			}
 		}
-
-		private (
-			MultiPatternConstraints,
-			ImmutableBitArray
-		) UpdatePiecesBasedOnPatternConstraintsRecursive(
-			MultiPatternConstraints patternContraints,
-			ImmutableBitArray pieces
-		)
-		{
-			var newPieces = FilterSetBasedOnPatterns(pieces, patternContraints);
-			if (newPieces.IsEquivalentTo(pieces))
-			{
-				return (
-					AdjustPatternConstraintsBasedOnAvailablePieces(
-						newPieces,
-						patternContraints,
-						this.PiecePatternLookup
-					), 
-					pieces
-				);
-			}
-			else
-			{
-				return UpdatePatternConstraintsBasedOnPiecesRecursive(
-					patternContraints,
-					pieces
-				);
-			}
-		}
-
-		private SlotConstraint ModifyPatternConstraints(
-			Func<MultiPatternConstraints, MultiPatternConstraints> transform
-		)
-		{
-			var newConstraints = transform(this.PatternConstraints);
-			if (newConstraints.IsEquivalentTo(this.PatternConstraints))
-			{
-				return this;
-			}
-			(newConstraints, var newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(
-				newConstraints,
-				this.Pieces
-			);
-			return this with
-			{
-				PatternConstraints = newConstraints,
-				Pieces = newPieces
-			};
-		}
-
-		public SlotConstraint SetTopPattern(
-			ulong pattern
-		) => ModifyPatternConstraints(
-			mp => mp with { Top = pattern }
-		);
-
-		public SlotConstraint SetLeftPattern(
-			ulong pattern
-		) => ModifyPatternConstraints(
-			mp => mp with { Left = pattern }
-		);
-
-		public SlotConstraint ConstrainLeftPattern(
-			ulong patterns
-		) => ModifyPatternConstraints(
-			mp =>
-				mp with
-				{
-					Left = mp.Left & patterns
-				}
-		);
-
-		public SlotConstraint ConstrainTopPattern(
-			ulong patterns
-		) => ModifyPatternConstraints(
-			mp =>
-				mp with
-				{
-					Top = mp.Top & patterns,
-				}
-		);
-
-		public SlotConstraint ConstrainBottomPattern(
-			ulong patterns
-		) => ModifyPatternConstraints(
-			mp =>
-				mp with
-				{
-					Bottom = mp.Bottom & patterns,
-				}
-		);
-
-		public SlotConstraint ConstrainRightPattern(
-			ulong patterns
-		) => ModifyPatternConstraints(
-			mp =>
-				mp with
-				{
-					Right = mp.Right & patterns
-				}
-		);
-
-		public SlotConstraint SetRightPattern(
-			ulong pattern
-		) => ModifyPatternConstraints(
-			mp => mp with { Right = pattern }
-		);
-
-		public SlotConstraint SetBottomPattern(
-			ulong pattern
-		) => ModifyPatternConstraints(
-			mp => mp with { Bottom = pattern }
-		);
-
-
-		public delegate (MultiPatternConstraints, ImmutableBitArray) TransformAction(MultiPatternConstraints mpc, ImmutableBitArray pieces);
-
-		public SlotConstraint Transform(IEnumerable<TransformAction> actions)
-		{
-			var newPatternConstraints = this.PatternConstraints;
-			var newPieces = this.Pieces;
-			foreach(var a in actions)
-			{
-				(newPatternConstraints, newPieces) = a(newPatternConstraints, newPieces);
-			}
-			if (!newPatternConstraints.IsEquivalentTo(this.PatternConstraints))
-			{
-				(newPatternConstraints, newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(newPatternConstraints, newPieces);
-			}
-			else if (!newPieces.IsEquivalentTo(this.Pieces))
-			{
-				(newPatternConstraints, newPieces) = UpdatePatternConstraintsBasedOnPiecesRecursive(newPatternConstraints, newPieces);
-			}
-			return this with
-			{
-				PatternConstraints = newPatternConstraints,
-				Pieces = newPieces
-			};
-		}
-
+		return rv;
 	}
 
-	public static class SquareConstraintExtensions
+	private(
+		MultiPatternConstraints,
+		ImmutableBitArray
+	) UpdatePatternConstraintsBasedOnPiecesRecursive(
+		MultiPatternConstraints patternContraints,
+		ImmutableBitArray pieces
+	)
 	{
-		public static ulong AllPatterns = 0xFFFFFFFFFFFFFFFFl;
-		public static ulong NotEdgePatterns = AllPatterns & ~((ulong)1 << 23);
+		var newConstraints = AdjustPatternConstraintsBasedOnAvailablePieces(
+			pieces,
+			patternContraints,
+			this.PiecePatternLookup
+		);
+		if (newConstraints.IsEquivalentTo(patternContraints))
+		{
+			return (
+				patternContraints, 
+				FilterSetBasedOnPatterns(pieces, patternContraints)
+			);
+		}
+		else
+		{
+			return UpdatePiecesBasedOnPatternConstraintsRecursive(
+				newConstraints,
+				pieces
+			);
+		}
+	}
 
-		public static bool IsEquivalentTo(
-			this SlotConstraint c1,
-			SlotConstraint c2
-		) =>
-			ReferenceEquals(c1, c2)
-			|| (
-				c1.Pieces.IsEquivalentTo(c2.Pieces)
-				&& c1.PatternConstraints.IsEquivalentTo(c2.PatternConstraints)
+	private (
+		MultiPatternConstraints,
+		ImmutableBitArray
+	) UpdatePiecesBasedOnPatternConstraintsRecursive(
+		MultiPatternConstraints patternContraints,
+		ImmutableBitArray pieces
+	)
+	{
+		var newPieces = FilterSetBasedOnPatterns(pieces, patternContraints);
+		if (newPieces.IsEquivalentTo(pieces))
+		{
+			return (
+				AdjustPatternConstraintsBasedOnAvailablePieces(
+					newPieces,
+					patternContraints,
+					this.PiecePatternLookup
+				), 
+				pieces
+			);
+		}
+		else
+		{
+			return UpdatePatternConstraintsBasedOnPiecesRecursive(
+				patternContraints,
+				pieces
+			);
+		}
+	}
+
+	private SlotConstraint ModifyPatternConstraints(
+		Func<MultiPatternConstraints, MultiPatternConstraints> transform
+	)
+	{
+		var newConstraints = transform(this.PatternConstraints);
+		if (newConstraints.IsEquivalentTo(this.PatternConstraints))
+		{
+			return this;
+		}
+		(newConstraints, var newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(
+			newConstraints,
+			this.Pieces
+		);
+		return this with
+		{
+			PatternConstraints = newConstraints,
+			Pieces = newPieces
+		};
+	}
+
+	public SlotConstraint SetTopPattern(
+		ulong pattern
+	) => ModifyPatternConstraints(
+		mp => mp with { Top = pattern }
+	);
+
+	public SlotConstraint SetLeftPattern(
+		ulong pattern
+	) => ModifyPatternConstraints(
+		mp => mp with { Left = pattern }
+	);
+
+	public SlotConstraint ConstrainLeftPattern(
+		ulong patterns
+	) => ModifyPatternConstraints(
+		mp =>
+			mp with
+			{
+				Left = mp.Left & patterns
+			}
+	);
+
+	public SlotConstraint ConstrainTopPattern(
+		ulong patterns
+	) => ModifyPatternConstraints(
+		mp =>
+			mp with
+			{
+				Top = mp.Top & patterns,
+			}
+	);
+
+	public SlotConstraint ConstrainBottomPattern(
+		ulong patterns
+	) => ModifyPatternConstraints(
+		mp =>
+			mp with
+			{
+				Bottom = mp.Bottom & patterns,
+			}
+	);
+
+	public SlotConstraint ConstrainRightPattern(
+		ulong patterns
+	) => ModifyPatternConstraints(
+		mp =>
+			mp with
+			{
+				Right = mp.Right & patterns
+			}
+	);
+
+	public SlotConstraint SetRightPattern(
+		ulong pattern
+	) => ModifyPatternConstraints(
+		mp => mp with { Right = pattern }
+	);
+
+	public SlotConstraint SetBottomPattern(
+		ulong pattern
+	) => ModifyPatternConstraints(
+		mp => mp with { Bottom = pattern }
+	);
+
+
+	public delegate (MultiPatternConstraints, ImmutableBitArray) TransformAction(MultiPatternConstraints mpc, ImmutableBitArray pieces);
+
+	public SlotConstraint Transform(IEnumerable<TransformAction> actions)
+	{
+		var newPatternConstraints = this.PatternConstraints;
+		var newPieces = this.Pieces;
+		foreach(var a in actions)
+		{
+			(newPatternConstraints, newPieces) = a(newPatternConstraints, newPieces);
+		}
+		if (!newPatternConstraints.IsEquivalentTo(this.PatternConstraints))
+		{
+			(newPatternConstraints, newPieces) = UpdatePiecesBasedOnPatternConstraintsRecursive(newPatternConstraints, newPieces);
+		}
+		else if (!newPieces.IsEquivalentTo(this.Pieces))
+		{
+			(newPatternConstraints, newPieces) = UpdatePatternConstraintsBasedOnPiecesRecursive(newPatternConstraints, newPieces);
+		}
+		return this with
+		{
+			PatternConstraints = newPatternConstraints,
+			Pieces = newPieces
+		};
+	}
+
+}
+
+public static class SquareConstraintExtensions
+{
+	public static ulong AllPatterns = 0xFFFFFFFFFFFFFFFFl;
+	public static ulong NotEdgePatterns = AllPatterns & ~((ulong)1 << 23);
+
+	public static bool IsEquivalentTo(
+		this SlotConstraint c1,
+		SlotConstraint c2
+	) =>
+		ReferenceEquals(c1, c2)
+		|| (
+			c1.Pieces.IsEquivalentTo(c2.Pieces)
+			&& c1.PatternConstraints.IsEquivalentTo(c2.PatternConstraints)
+		);
+
+	private static Position? TryTransformPosition(
+		Dimensions dimensions,
+		Position position,
+		Func<Position, Position> t
+	)
+	{
+		var newPosition = t(position);
+		return dimensions.Contains(newPosition)
+			? newPosition
+			: null;
+	}
+
+	public static class Transforms
+	{
+		public static SlotConstraint.TransformAction SetPlacement(Placement p) =>
+			(patterns, pieces) => (patterns, ImmutableBitArray.SingleValue(p.PieceIndex));
+
+		public static SlotConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
+			(patterns, pieces) => (patterns, pieces.Remove(pieceIndex));
+
+		public static SlotConstraint.TransformAction ModifyPatterns(Func<MultiPatternConstraints, MultiPatternConstraints> f) =>
+			(patterns, pieces) => (f(patterns), pieces);
+
+		public static SlotConstraint.TransformAction SetLeftPattern(ulong pattern) =>
+			ModifyPatterns(
+				p => p with { Left = pattern }
 			);
 
-		private static Position? TryTransformPosition(
-			Dimensions dimensions,
-			Position position,
-			Func<Position, Position> t
-		)
+		public static SlotConstraint.TransformAction SetTopPattern(ulong pattern) =>
+			ModifyPatterns(
+				p => p with { Top = pattern }
+			);
+
+		public static SlotConstraint.TransformAction SetRightPattern(ulong pattern) =>
+			ModifyPatterns(
+				p => p with { Right = pattern }
+			);
+
+		public static SlotConstraint.TransformAction SetBottomPattern(ulong pattern) =>
+			ModifyPatterns(
+				p => p with { Bottom = pattern }
+			);
+
+		public static SlotConstraint.TransformAction ConstrainRightPattern(
+			ulong patterns
+		) =>
+			ModifyPatterns(
+				p => p with { Right = p.Right & patterns }
+			);
+
+		public static SlotConstraint.TransformAction ConstrainTopPattern(
+			ulong patterns
+		) =>
+			ModifyPatterns(
+				p => p with { Top = p.Top & patterns }
+			);
+
+
+		public static SlotConstraint.TransformAction ConstrainBottomPattern(
+			ulong patterns
+		) =>
+			ModifyPatterns(
+				p => p with { Bottom = p.Bottom & patterns }
+			);
+
+		public static SlotConstraint.TransformAction ConstrainLeftPattern(
+			ulong patterns
+		) =>
+			ModifyPatterns(
+				p => p with { Left = p.Left & patterns }
+			);
+	}
+
+	private static ImmutableArray<SlotConstraint>? ProcessQueue(
+		ImmutableArray<SlotConstraint> origionalConstraints,
+		SlotConstraintTransformQueue q,
+		Dimensions dimensions
+	)
+	{
+		SlotConstraint[] constraints = origionalConstraints.ToArray();
+		bool anyChanges = false;
+		while (q.HasItems)
 		{
-			var newPosition = t(position);
-			return dimensions.Contains(newPosition)
-				? newPosition
-				: null;
-		}
-
-		public static class Transforms
-		{
-			public static SlotConstraint.TransformAction SetPlacement(Placement p) =>
-				(patterns, pieces) => (patterns, ImmutableBitArray.SingleValue(p.PieceIndex));
-
-			public static SlotConstraint.TransformAction RemovePossiblePiece(int pieceIndex) =>
-				(patterns, pieces) => (patterns, pieces.Remove(pieceIndex));
-
-			public static SlotConstraint.TransformAction ModifyPatterns(Func<MultiPatternConstraints, MultiPatternConstraints> f) =>
-				(patterns, pieces) => (f(patterns), pieces);
-
-			public static SlotConstraint.TransformAction SetLeftPattern(ulong pattern) =>
-				ModifyPatterns(
-					p => p with { Left = pattern }
-				);
-
-			public static SlotConstraint.TransformAction SetTopPattern(ulong pattern) =>
-				ModifyPatterns(
-					p => p with { Top = pattern }
-				);
-
-			public static SlotConstraint.TransformAction SetRightPattern(ulong pattern) =>
-				ModifyPatterns(
-					p => p with { Right = pattern }
-				);
-
-			public static SlotConstraint.TransformAction SetBottomPattern(ulong pattern) =>
-				ModifyPatterns(
-					p => p with { Bottom = pattern }
-				);
-
-			public static SlotConstraint.TransformAction ConstrainRightPattern(
-				ulong patterns
-			) =>
-				ModifyPatterns(
-					p => p with { Right = p.Right & patterns }
-				);
-
-			public static SlotConstraint.TransformAction ConstrainTopPattern(
-				ulong patterns
-			) =>
-				ModifyPatterns(
-					p => p with { Top = p.Top & patterns }
-				);
-
-
-			public static SlotConstraint.TransformAction ConstrainBottomPattern(
-				ulong patterns
-			) =>
-				ModifyPatterns(
-					p => p with { Bottom = p.Bottom & patterns }
-				);
-
-			public static SlotConstraint.TransformAction ConstrainLeftPattern(
-				ulong patterns
-			) =>
-				ModifyPatterns(
-					p => p with { Left = p.Left & patterns }
-				);
-		}
-
-		private static ImmutableArray<SlotConstraint>? ProcessQueue(
-			ImmutableArray<SlotConstraint> origionalConstraints,
-			SlotConstraintTransformQueue q,
-			Dimensions dimensions
-		)
-		{
-			SlotConstraint[] constraints = origionalConstraints.ToArray();
-			bool anyChanges = false;
+			var newItemsWithTwo = new List<int>();
 			while (q.HasItems)
 			{
-				var newItemsWithTwo = new List<int>();
-				while (q.HasItems)
+				var qPopResult = q.Pop();
+				if (qPopResult == null)
 				{
-					var qPopResult = q.Pop();
-					if (qPopResult == null)
+					break;
+				}
+				var (position, transforms) = qPopResult;
+				var constraintIndex = dimensions.PositionToIndex(position);
+				var before = constraints[constraintIndex];
+				var after = before.Transform(transforms);
+				if (!before.IsEquivalentTo(after))
+				{
+					anyChanges = true;
+					constraints[constraintIndex] = after;
+					if (after.Pieces.Count() == 0)
 					{
-						break;
+						// The board is in an invalid state.
+						// Abort whatever triggered this.
+						return null;
 					}
-					var (position, transforms) = qPopResult;
-					var constraintIndex = dimensions.PositionToIndex(position);
-					var before = constraints[constraintIndex];
-					var after = before.Transform(transforms);
-					if (!before.IsEquivalentTo(after))
+					else if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
 					{
-						anyChanges = true;
-						constraints[constraintIndex] = after;
-						if (after.Pieces.Count() == 0)
+						var thePieceIndex = after.Pieces.First();
+						var removePiece = Transforms.RemovePossiblePiece(thePieceIndex);
+						for (var i = 0; i < constraints.Length; ++i)
 						{
-							// The board is in an invalid state.
-							// Abort whatever triggered this.
-							return null;
-						}
-						else if ((after.Pieces.Count() == 1) && (before.Pieces.Count() > 1))
-						{
-							var thePieceIndex = after.Pieces.First();
-							var removePiece = Transforms.RemovePossiblePiece(thePieceIndex);
-							for (var i = 0; i < constraints.Length; ++i)
+							if ((i != constraintIndex) && constraints[i].Pieces.Contains(thePieceIndex))
 							{
-								if ((i != constraintIndex) && constraints[i].Pieces.Contains(thePieceIndex))
-								{
-									q.Push(
-										dimensions.IndexToPosition(i),
-										removePiece
-									);
-								}
-							}
-						}
-						else if ((after.Pieces.Count() == 2) && (before.Pieces.Count() > 2))
-						{
-							newItemsWithTwo.Add(constraintIndex);
-						}
-						if (before.PatternConstraints.Left != after.PatternConstraints.Left)
-						{
-							var adjPosition = TryTransformPosition(
-								dimensions,
-								position,
-								Positions.Left
-							);
-							if (adjPosition != null)
-							{
-								var left = after.PatternConstraints.Left;
 								q.Push(
-									adjPosition,
-									Transforms.ConstrainRightPattern(left)
+									dimensions.IndexToPosition(i),
+									removePiece
 								);
 							}
 						}
-						if (before.PatternConstraints.Top != after.PatternConstraints.Top)
+					}
+					else if ((after.Pieces.Count() == 2) && (before.Pieces.Count() > 2))
+					{
+						newItemsWithTwo.Add(constraintIndex);
+					}
+					if (before.PatternConstraints.Left != after.PatternConstraints.Left)
+					{
+						var adjPosition = TryTransformPosition(
+							dimensions,
+							position,
+							Positions.Left
+						);
+						if (adjPosition != null)
 						{
-							var adjPosition = TryTransformPosition(
-								dimensions,
-								position,
-								Positions.Above
+							var left = after.PatternConstraints.Left;
+							q.Push(
+								adjPosition,
+								Transforms.ConstrainRightPattern(left)
 							);
-							if (adjPosition != null)
-							{
-								var top = after.PatternConstraints.Top;
-								q.Push(
-									adjPosition,
-									Transforms.ConstrainBottomPattern(top)
-								);
-							}
 						}
-						if (before.PatternConstraints.Right != after.PatternConstraints.Right)
+					}
+					if (before.PatternConstraints.Top != after.PatternConstraints.Top)
+					{
+						var adjPosition = TryTransformPosition(
+							dimensions,
+							position,
+							Positions.Above
+						);
+						if (adjPosition != null)
 						{
-							var adjPosition = TryTransformPosition(
-								dimensions,
-								position,
-								Positions.Right
+							var top = after.PatternConstraints.Top;
+							q.Push(
+								adjPosition,
+								Transforms.ConstrainBottomPattern(top)
 							);
-							if (adjPosition != null)
-							{
-								var right = after.PatternConstraints.Right;
-								q.Push(
-									adjPosition,
-									Transforms.ConstrainLeftPattern(right)
-								);
-							}
 						}
-						if (before.PatternConstraints.Bottom != after.PatternConstraints.Bottom)
+					}
+					if (before.PatternConstraints.Right != after.PatternConstraints.Right)
+					{
+						var adjPosition = TryTransformPosition(
+							dimensions,
+							position,
+							Positions.Right
+						);
+						if (adjPosition != null)
 						{
-							var adjPosition = TryTransformPosition(
-								dimensions,
-								position,
-								Positions.Below
+							var right = after.PatternConstraints.Right;
+							q.Push(
+								adjPosition,
+								Transforms.ConstrainLeftPattern(right)
 							);
-							if (adjPosition != null)
-							{
-								var bottom = after.PatternConstraints.Bottom;
-								q.Push(
-									adjPosition,
-									Transforms.ConstrainTopPattern(bottom)
-								);
-							}
+						}
+					}
+					if (before.PatternConstraints.Bottom != after.PatternConstraints.Bottom)
+					{
+						var adjPosition = TryTransformPosition(
+							dimensions,
+							position,
+							Positions.Below
+						);
+						if (adjPosition != null)
+						{
+							var bottom = after.PatternConstraints.Bottom;
+							q.Push(
+								adjPosition,
+								Transforms.ConstrainTopPattern(bottom)
+							);
 						}
 					}
 				}
-				if (newItemsWithTwo.Any())
+			}
+			if (newItemsWithTwo.Any())
+			{
+				foreach(var newItemIndex in newItemsWithTwo)
 				{
-					foreach(var newItemIndex in newItemsWithTwo)
+					var newItemConstraint = constraints[newItemIndex];
+					if (newItemConstraint.Pieces.Count() != 2)
 					{
-						var newItemConstraint = constraints[newItemIndex];
-						if (newItemConstraint.Pieces.Count() != 2)
+						continue;
+					}
+					var matchingIndexes = new List<int>();
+					for(int i = 0; i < constraints.Length; ++i)
+					{
+						if (i == newItemIndex)
 						{
 							continue;
 						}
-						var matchingIndexes = new List<int>();
+						var trialConstraint = constraints[i];
+						if (trialConstraint.Pieces.IsEquivalentTo(newItemConstraint.Pieces))
+						{
+							matchingIndexes.Add(i);
+						}
+					}
+					if (matchingIndexes.Count > 1)
+					{
+						return null;
+					}
+					else if (matchingIndexes.Count == 1)
+					{
 						for(int i = 0; i < constraints.Length; ++i)
 						{
-							if (i == newItemIndex)
+							if ((i != newItemIndex) && (i != matchingIndexes[0]))
 							{
-								continue;
-							}
-							var trialConstraint = constraints[i];
-							if (trialConstraint.Pieces.IsEquivalentTo(newItemConstraint.Pieces))
-							{
-								matchingIndexes.Add(i);
-							}
-						}
-						if (matchingIndexes.Count > 1)
-						{
-							return null;
-						}
-						else if (matchingIndexes.Count == 1)
-						{
-							for(int i = 0; i < constraints.Length; ++i)
-							{
-								if ((i != newItemIndex) && (i != matchingIndexes[0]))
+								foreach (var p in newItemConstraint.Pieces)
 								{
-									foreach (var p in newItemConstraint.Pieces)
+									if (constraints[i].Pieces.Contains(p))
 									{
-										if (constraints[i].Pieces.Contains(p))
-										{
-											q.Push(
-												dimensions.IndexToPosition(i),
-												Transforms.RemovePossiblePiece(p)
-											);
-										}
+										q.Push(
+											dimensions.IndexToPosition(i),
+											Transforms.RemovePossiblePiece(p)
+										);
 									}
 								}
 							}
@@ -604,124 +603,124 @@ namespace Eternity
 					}
 				}
 			}
-			return anyChanges ? constraints.ToImmutableArray() : origionalConstraints;
 		}
+		return anyChanges ? constraints.ToImmutableArray() : origionalConstraints;
+	}
 
-		public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
+	public static ImmutableArray<SlotConstraint>? GenerateInitialPlacements(IReadOnlyList<IReadOnlyList<ulong>> pieceSides)
+	{
+		var constraintsArray = new SlotConstraint[pieceSides.Count];
+
+		ImmutableBitArray AllPieces = ImmutableBitArray.AllPieces(pieceSides.Count);
+
+		var initialConstraint = new SlotConstraint
 		{
-			var constraintsArray = new SlotConstraint[pieceSides.Count];
-
-			ImmutableBitArray AllPieces = ImmutableBitArray.AllPieces(pieceSides.Count);
-
-			var initialConstraint = new SlotConstraint
-			{
-				Pieces = AllPieces,
-				PiecePatternLookup = PreRotatedPatternLookup.Generate(pieceSides)
-			};
-			for (int placementIndex = 0; placementIndex < constraintsArray.Length; ++placementIndex)
-			{
-				constraintsArray[placementIndex] = initialConstraint;
-			}
-			var squareRoot = (int)Math.Round(Math.Sqrt(pieceSides.Count));
-			var dimensions = new Dimensions(squareRoot, squareRoot);
-
-			var constraints = constraintsArray.ToImmutableArray();
-			var q = new SlotConstraintTransformQueue();
-			int sideLength = (int)(Math.Round(Math.Sqrt(pieceSides.Count)));
-			for (int placementIndex = 0; placementIndex < pieceSides.Count; ++placementIndex)
-			{
-				var position = dimensions.IndexToPosition(placementIndex);
-				if (position.X == 0)
-				{
-					q.Push(position, 
-						Transforms.SetLeftPattern(1 << 23)
-					);
-				}
-				else
-				{
-					q.Push(position, Transforms.ConstrainLeftPattern(NotEdgePatterns));
-				}
-				if (position.Y == 0)
-				{
-					q.Push(position, Transforms.SetTopPattern(1 << 23));
-				}
-				else
-				{
-					q.Push(position, Transforms.ConstrainTopPattern(NotEdgePatterns));
-				}
-				if (position.X == sideLength-1)
-				{
-					q.Push(position, Transforms.SetRightPattern(1 << 23));
-				}
-				else
-				{
-					q.Push(position, Transforms.ConstrainRightPattern(NotEdgePatterns));
-				}
-				if (position.Y == sideLength-1)
-				{
-					q.Push(position, Transforms.SetBottomPattern(1 << 23));
-				}
-				else
-				{
-					q.Push(position, Transforms.ConstrainBottomPattern(NotEdgePatterns));
-				}
-			}
-
-			
-			var nullableResult = ProcessQueue(constraints, q, dimensions);
-			if (nullableResult == null)
-			{
-				return null;
-			}
-			// Find the first corner piece and put it in the top left corner
-			// It never moves!
-			int firstCornerPieceIndex = -1;
-			for(int i = 0; i < pieceSides.Count; ++i)
-			{
-				if (pieceSides[i].Where(ps => ps == 1 << 23).Count() == 2)
-				{
-					firstCornerPieceIndex = i;
-					break;
-				}
-			}
-			if (firstCornerPieceIndex == -1)
-			{
-				return null;
-			}
-			return nullableResult?.SetPlacement(
-				new Placement(new Position(0, 0), firstCornerPieceIndex, []),
-				dimensions
-			);
-		}
-
-
-		public static ImmutableArray<SlotConstraint>? SetPlacement(
-			this ImmutableArray<SlotConstraint> constraints,
-			Placement placement,
-			Dimensions dimensions
-			)
+			Pieces = AllPieces,
+			PiecePatternLookup = PreRotatedPatternLookup.Generate(pieceSides)
+		};
+		for (int placementIndex = 0; placementIndex < constraintsArray.Length; ++placementIndex)
 		{
-			var q = new SlotConstraintTransformQueue();
-			int positionIndex = dimensions.PositionToIndex(placement.Position);
-			var removePiece = Transforms.RemovePossiblePiece(placement.PieceIndex);
-			for (int i = 0; i < constraints.Length; ++i)
-			{
-				if (i == positionIndex)
-				{
-					q.Push(
-						dimensions.IndexToPosition(i),
-						Transforms.SetPlacement(placement)
-					);
-				}
-				else
-				{
-					q.Push(
-						dimensions.IndexToPosition(i),
-						removePiece
-					);
-				}
-			}
-			return ProcessQueue(constraints, q, dimensions);
+			constraintsArray[placementIndex] = initialConstraint;
 		}
+		var squareRoot = (int)Math.Round(Math.Sqrt(pieceSides.Count));
+		var dimensions = new Dimensions(squareRoot, squareRoot);
+
+		var constraints = constraintsArray.ToImmutableArray();
+		var q = new SlotConstraintTransformQueue();
+		int sideLength = (int)(Math.Round(Math.Sqrt(pieceSides.Count)));
+		for (int placementIndex = 0; placementIndex < pieceSides.Count; ++placementIndex)
+		{
+			var position = dimensions.IndexToPosition(placementIndex);
+			if (position.X == 0)
+			{
+				q.Push(position, 
+					Transforms.SetLeftPattern(1 << 23)
+				);
+			}
+			else
+			{
+				q.Push(position, Transforms.ConstrainLeftPattern(NotEdgePatterns));
+			}
+			if (position.Y == 0)
+			{
+				q.Push(position, Transforms.SetTopPattern(1 << 23));
+			}
+			else
+			{
+				q.Push(position, Transforms.ConstrainTopPattern(NotEdgePatterns));
+			}
+			if (position.X == sideLength-1)
+			{
+				q.Push(position, Transforms.SetRightPattern(1 << 23));
+			}
+			else
+			{
+				q.Push(position, Transforms.ConstrainRightPattern(NotEdgePatterns));
+			}
+			if (position.Y == sideLength-1)
+			{
+				q.Push(position, Transforms.SetBottomPattern(1 << 23));
+			}
+			else
+			{
+				q.Push(position, Transforms.ConstrainBottomPattern(NotEdgePatterns));
+			}
+		}
+
+		
+		var nullableResult = ProcessQueue(constraints, q, dimensions);
+		if (nullableResult == null)
+		{
+			return null;
+		}
+		// Find the first corner piece and put it in the top left corner
+		// It never moves!
+		int firstCornerPieceIndex = -1;
+		for(int i = 0; i < pieceSides.Count; ++i)
+		{
+			if (pieceSides[i].Where(ps => ps == 1 << 23).Count() == 2)
+			{
+				firstCornerPieceIndex = i;
+				break;
+			}
+		}
+		if (firstCornerPieceIndex == -1)
+		{
+			return null;
+		}
+		return nullableResult?.SetPlacement(
+			new Placement(new Position(0, 0), firstCornerPieceIndex, []),
+			dimensions
+		);
+	}
+
+
+	public static ImmutableArray<SlotConstraint>? SetPlacement(
+		this ImmutableArray<SlotConstraint> constraints,
+		Placement placement,
+		Dimensions dimensions
+		)
+	{
+		var q = new SlotConstraintTransformQueue();
+		int positionIndex = dimensions.PositionToIndex(placement.Position);
+		var removePiece = Transforms.RemovePossiblePiece(placement.PieceIndex);
+		for (int i = 0; i < constraints.Length; ++i)
+		{
+			if (i == positionIndex)
+			{
+				q.Push(
+					dimensions.IndexToPosition(i),
+					Transforms.SetPlacement(placement)
+				);
+			}
+			else
+			{
+				q.Push(
+					dimensions.IndexToPosition(i),
+					removePiece
+				);
+			}
+		}
+		return ProcessQueue(constraints, q, dimensions);
 	}
 }
