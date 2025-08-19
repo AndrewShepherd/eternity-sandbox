@@ -2,7 +2,6 @@
 namespace Eternity.WpfApp;
 
 using System;
-using System.Collections.Immutable;
 using System.Data;
 using System.Numerics;
 using System.Windows.Media.Imaging;

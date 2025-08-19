@@ -16,6 +16,15 @@
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
+		<Button 
+			Grid.Row="0" 
+			Grid.Column="0"
+			HorizontalAlignment="Left" 
+			VerticalAlignment="Top"
+			Command="{Binding ToggleConnectionCommand}"
+		>
+			<TextBlock Text="{Binding ToggleConnectionText}" />
+		</Button>
 		<Viewbox>
 			<TextBlock Text="{Binding TestString}" />
 		</Viewbox>
