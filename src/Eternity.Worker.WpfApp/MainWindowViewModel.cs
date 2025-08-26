@@ -3,40 +3,47 @@
 namespace Eternity.Worker.WpfApp;
 
 using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Windows.Input;
 
-using Grpc.Core;
 using ReactiveUI;
 
-using static Eternity.Proto.EternityService;
-
-public sealed class MainWindowViewModel
+public sealed class MainWindowViewModel : ReactiveObject
 {
+	private readonly BehaviorSubject<WorkerState> _workerState = new(
+		new WorkerStateIdle()
+	);
+
 	private ReactiveCommand<Unit, Unit> _toggleConnectionCommand;
 
-
-	public ICommand ToggleConnectionCommand => _toggleConnectionCommand;
+	readonly ObservableAsPropertyHelper<string> _toggleConnectionDescription;
 
 	public MainWindowViewModel()
 	{
+		_toggleConnectionDescription = (
+			from s in _workerState
+			select s switch
+			{
+				WorkerStateIdle => "Connect",
+				WorkerStateConnected => "Disconnect",
+				_ => "Unknown state"
+			}
+		).ToProperty(this, vm => vm.ToggleConnectionText);
+
 		_toggleConnectionCommand = ReactiveCommand.Create(
-			PerformToggleConnectionAction
+			() =>
+				_workerState.OnNext(
+					_workerState.Value switch
+					{
+						WorkerStateIdle i => i.Connect(),
+						WorkerStateConnected c => c.Disconnect(),
+						_ => throw new Exception("Unexpected worker state")
+					}
+				)
 		);
 	}
 
-	private void PerformToggleConnectionAction()
-	{
-		var channel = new Channel(
-			"localhost",
-			3876,
-			ChannelCredentials.Insecure
-		);
-		var client = new EternityServiceClient(channel);
-		var call = client.ConnectWorker();
-	}
-	public string TestString => "Eternity.Worker.WpfApp";
-
-	public string ToggleConnectionText => "Toggle Connection";
-
-
+	public string ToggleConnectionText => _toggleConnectionDescription.Value;
+	public ICommand ToggleConnectionCommand => _toggleConnectionCommand;
 }

@@ -17,8 +17,12 @@
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
-		<Viewbox HorizontalAlignment ="Stretch" VerticalAlignment="Stretch">
-			<TextBlock Text="{Binding TestString}" />
-		</Viewbox>
+		<ListView Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Connections}">
+			<ListView.ItemTemplate>
+				<DataTemplate>
+					<TextBlock>Connection Item</TextBlock>
+				</DataTemplate>
+			</ListView.ItemTemplate>
+		</ListView>
     </Grid>
 </Window>
