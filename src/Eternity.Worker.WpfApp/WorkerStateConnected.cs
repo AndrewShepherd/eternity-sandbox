@@ -1,7 +1,6 @@
 ﻿using Eternity.Proto;
 using Grpc.Core;
 
-
 namespace Eternity.Worker.WpfApp;
 
 class WorkerStateConnected: WorkerState
