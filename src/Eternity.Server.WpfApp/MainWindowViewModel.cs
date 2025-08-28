@@ -4,6 +4,7 @@ namespace Eternity.Server.WpfApp;
 using Eternity.Proto;
 using Grpc.Core;
 using ReactiveUI;
+using System;
 using System.Collections.Generic;
 
 public sealed class MainWindowViewModel : ReactiveObject
@@ -27,7 +28,6 @@ public sealed class MainWindowViewModel : ReactiveObject
 			this,
 			vm => vm.Connections
 		);
-		OpenListener();
 	}
 
 	readonly EternityServiceImpl _eternityService = new();
@@ -36,8 +36,27 @@ public sealed class MainWindowViewModel : ReactiveObject
 
 	public IReadOnlyList<ConnectionEntry> Connections => _connectionEntries.Value;
 
-	void OpenListener()
+	public void OpenListener()
 	{
 		_server.Start();
+	}
+
+	internal async Task SetPieceSides(IReadOnlyList<ulong>[] pieces)
+	{
+
+		var solutionState = new SolutionState(pieces);
+
+		// TODO
+		// Send it to all of the connected workers
+		// The connected workers should display it.
+		foreach(var connectionEntry in Connections)
+		{
+			await connectionEntry.ResponseStream.WriteAsync(
+				new MessageToWorker()
+				{
+					RunningState = SolutionStateProto.Convert(solutionState),	
+				}
+			);
+		}
 	}
 }

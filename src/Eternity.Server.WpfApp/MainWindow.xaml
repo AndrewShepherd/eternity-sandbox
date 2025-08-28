@@ -6,18 +6,31 @@
         xmlns:local="clr-namespace:Eternity.Server.WpfApp"
         mc:Ignorable="d"
         Title="Eternity Server" Height="450" Width="800"
+		Loaded="Window_Loaded"
 	>
 	<Window.Resources>
 		<local:MainWindowViewModel x:Key="MainWindowViewModel" />
 	</Window.Resources>
+	<Window.CommandBindings>
+		<CommandBinding
+			Command="{x:Static ApplicationCommands.Open}"
+			Executed="OpenCommand_Executed"
+			/>
+	</Window.CommandBindings>
     <Grid DataContext="{StaticResource MainWindowViewModel}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
-		<ListView Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Connections}">
+		<Menu Grid.Row="0" Grid.Column="0">
+			<MenuItem Header="_File">
+				<MenuItem Header="_Open Board Configuration" Command="{x:Static ApplicationCommands.Open}" />
+			</MenuItem>
+		</Menu>
+		<ListView Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Connections}">
 			<ListView.ItemTemplate>
 				<DataTemplate>
 					<TextBlock>Connection Item</TextBlock>

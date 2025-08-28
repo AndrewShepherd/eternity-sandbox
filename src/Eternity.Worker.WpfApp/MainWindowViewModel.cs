@@ -6,7 +6,6 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
-
 using ReactiveUI;
 
 public sealed class MainWindowViewModel : ReactiveObject
@@ -19,6 +18,13 @@ public sealed class MainWindowViewModel : ReactiveObject
 
 	readonly ObservableAsPropertyHelper<string> _toggleConnectionDescription;
 
+	private static async Task<WorkerState> Toggle(WorkerState state) =>
+		state switch
+		{
+			WorkerStateIdle i => i.Connect(),
+			WorkerStateConnected c => await c.Disconnect(),
+			_ => throw new Exception("Unexpected worker state")
+		};
 	public MainWindowViewModel()
 	{
 		_toggleConnectionDescription = (
@@ -32,15 +38,7 @@ public sealed class MainWindowViewModel : ReactiveObject
 		).ToProperty(this, vm => vm.ToggleConnectionText);
 
 		_toggleConnectionCommand = ReactiveCommand.Create(
-			() =>
-				_workerState.OnNext(
-					_workerState.Value switch
-					{
-						WorkerStateIdle i => i.Connect(),
-						WorkerStateConnected c => c.Disconnect(),
-						_ => throw new Exception("Unexpected worker state")
-					}
-				)
+			async void () => _workerState.OnNext(await Toggle(_workerState.Value))
 		);
 	}
 

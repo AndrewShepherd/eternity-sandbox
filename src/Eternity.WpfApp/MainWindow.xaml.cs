@@ -53,12 +53,10 @@ namespace Eternity.WpfApp
 				this.Title = System.IO.Path.GetFileNameWithoutExtension(openFileDialog.FileName);
 				var txt = File.ReadAllText(openFileDialog.FileName);
 				var pieces = PieceTextReader.Parse(txt);
-				var vm = this.Resources["MainWindowViewModel"] as MainWindowViewModel;
-				if (vm != null)
+				if (this.Resources["MainWindowViewModel"] is MainWindowViewModel vm)
 				{
 					vm.SetPieceSides(pieces);
 				}
-
 			}
 		}
 

@@ -1,0 +1,13 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+package Eternity.Proto;
+
+import "RunningState.proto";
+
+
+message MessageToWorker {
+	oneof MessageContents {
+		RunningState RunningState = 1;
+	};
+}
