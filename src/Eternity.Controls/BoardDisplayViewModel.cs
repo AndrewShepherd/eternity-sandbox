@@ -1,7 +1,6 @@
-﻿
+﻿namespace Eternity.Controls;
 
-namespace Eternity.WpfApp;
-
+using Prism.Mvvm;
 using System.Collections.Immutable;
 using System.IO;
 using System.Windows;
@@ -110,12 +109,12 @@ public sealed class BoardDisplayViewModel : BindableBase
 	private static BitmapImage?[] LoadTriangles()
 	{
 		string?[] imageIds = new string?[45];
-		for(int i = 0; i < imageIds.Length; ++i)
+		for (int i = 0; i < imageIds.Length; ++i)
 		{
 			imageIds[i] = $"triangle_{i:d2}.png";
 		}
 		BitmapImage?[] result = new BitmapImage?[imageIds.Length];
-		for(int i = 0; i < imageIds.Length; ++i)
+		for (int i = 0; i < imageIds.Length; ++i)
 		{
 			string? imageId = imageIds[i];
 			if (imageId != null)
@@ -187,7 +186,7 @@ public sealed class BoardDisplayViewModel : BindableBase
 		}
 		var parameters = new CanvasItemGenerationParameters(
 			placements,
-			this.CanvasSize, 
+			this.CanvasSize,
 			this.SelectedSequenceIndex
 		);
 

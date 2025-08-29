@@ -1,5 +1,5 @@
 ﻿
-namespace Eternity.WpfApp;
+namespace Eternity.Controls;
 
 using System;
 using System.Data;
@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 
 public interface CanvasItem
 {
-	double Top { get;}
+	double Top { get; }
 	double Left { get; }
 
 	double Width { get; }
@@ -54,8 +54,8 @@ public sealed class CanvasConstraintItem : CanvasItem
 public static class CanvasItemExtensions
 {
 	internal static Func<
-		Placement, 
-		int, 
+		Placement,
+		int,
 		IEnumerable<CanvasPieceItem>
 	> CreateCanvasPieceItemGenerator(
 		double imageWidth,
@@ -95,7 +95,7 @@ public static class CanvasItemExtensions
 		Constraints constraints,
 		Dimensions dimensions)
 	{
-		foreach(var position in dimensions.GetAllPositions())
+		foreach (var position in dimensions.GetAllPositions())
 		{
 			var constraint = constraints.At(position);
 			if (constraint.Pieces.Count == 1)
@@ -120,9 +120,9 @@ public static class CanvasItemExtensions
 		Placements placements)
 	{
 		var g = CreateCanvasPieceItemGenerator(
-			pieceWidth, 
-			pieceHeight, 
-			triangleImages, 
+			pieceWidth,
+			pieceHeight,
+			triangleImages,
 			placements
 		);
 
@@ -150,7 +150,7 @@ public static class CanvasItemExtensions
 				Rotation = rotation
 			};
 		}
-		foreach(var position in placements.Dimensions.GetAllPositions())
+		foreach (var position in placements.Dimensions.GetAllPositions())
 		{
 			var patternConstraints = placements.Constraints.At(position).PatternConstraints;
 			var boogles = new[]
@@ -160,7 +160,7 @@ public static class CanvasItemExtensions
 				(patternConstraints.Bottom, 180),
 				(patternConstraints.Left, 270)
 			};
-			foreach(var b in boogles)
+			foreach (var b in boogles)
 			{
 				var (c, r) = b;
 				var pieceItem = RenderFromPatternConstraints(position, c, r);

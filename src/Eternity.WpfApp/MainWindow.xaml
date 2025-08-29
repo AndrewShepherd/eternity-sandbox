@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Eternity.WpfApp"
+		xmlns:WpfControls="clr-namespace:Eternity.Controls;assembly=Eternity.Controls"
         mc:Ignorable="d"
         Title="Eternity Solver" Height="450" Width="800"
 	>
@@ -62,7 +63,7 @@
 				SolutionsList="{Binding Solutions}"
 				WorkingPlacements="{Binding Placements}"
 				/>
-			<local:BoardDisplay
+			<WpfControls:BoardDisplay
 				Grid.Row="1"
 				HorizontalAlignment="Stretch"
 				VerticalAlignment="Stretch"

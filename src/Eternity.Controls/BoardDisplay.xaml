@@ -1,32 +1,32 @@
-﻿<UserControl x:Class="Eternity.WpfApp.BoardDisplay"
+﻿<UserControl x:Class="Eternity.Controls.BoardDisplay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:Eternity.WpfApp"
+             xmlns:local="clr-namespace:Eternity.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
 	>
 	<UserControl.Resources>
-    	<local:BoardDisplayViewModel x:Key="BoardDisplayViewModel" />
+		<local:BoardDisplayViewModel x:Key="BoardDisplayViewModel" />
 	</UserControl.Resources>
 	<Grid DataContext="{StaticResource BoardDisplayViewModel}">
-	<ItemsControl 
+		<ItemsControl 
 			
 		ItemsSource="{Binding CanvasItems}" 
 	>
-		<ItemsControl.ItemsPanel>
-			<ItemsPanelTemplate>
-				<Canvas IsItemsHost="True">
-					<Canvas.Background>
-						<SolidColorBrush Color="Azure" />
-					</Canvas.Background>
-				</Canvas>
-			</ItemsPanelTemplate>
-		</ItemsControl.ItemsPanel>
-		<ItemsControl.Resources>
-			<DataTemplate DataType="{x:Type local:CanvasPieceItem}">
-				<Image 
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<Canvas IsItemsHost="True">
+						<Canvas.Background>
+							<SolidColorBrush Color="Azure" />
+						</Canvas.Background>
+					</Canvas>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.Resources>
+				<DataTemplate DataType="{x:Type local:CanvasPieceItem}">
+					<Image 
 					Source="{Binding ImageSource}" 
 					RenderTransformOrigin="0.5, 0.5"
 					Width="{Binding Width}"
@@ -34,34 +34,34 @@
 					HorizontalAlignment="Stretch"
 					VerticalAlignment="Stretch"
 				>
-					<Image.RenderTransform>
-						<RotateTransform Angle="{Binding Rotation}" />
-					</Image.RenderTransform>
-				</Image>
-			</DataTemplate>
-			<DataTemplate DataType="{x:Type local:CanvasHighlightItem}">
-				<Rectangle
+						<Image.RenderTransform>
+							<RotateTransform Angle="{Binding Rotation}" />
+						</Image.RenderTransform>
+					</Image>
+				</DataTemplate>
+				<DataTemplate DataType="{x:Type local:CanvasHighlightItem}">
+					<Rectangle
 						Width="{Binding Width}"
 						Height="{Binding Height}"
 						Stroke="Yellow"
 						StrokeThickness="4"
 						/>
-			</DataTemplate>
-			<DataTemplate DataType="{x:Type local:CanvasConstraintItem}">
-				<Border Width="{Binding Width}" Height="{Binding Height}" Padding="6,6,6,6">
-					<Viewbox>
-						<TextBlock Text="{Binding Count}" />
-					</Viewbox>
-				</Border>
-			</DataTemplate>
-		</ItemsControl.Resources>
-		<ItemsControl.ItemContainerStyle>
-			<Style TargetType="ContentPresenter">
-				<Setter Property="Canvas.Left" Value="{Binding Left}" />
-				<Setter Property="Canvas.Top" Value="{Binding Top}" />
-			</Style>
-		</ItemsControl.ItemContainerStyle>
-	</ItemsControl>
+				</DataTemplate>
+				<DataTemplate DataType="{x:Type local:CanvasConstraintItem}">
+					<Border Width="{Binding Width}" Height="{Binding Height}" Padding="6,6,6,6">
+						<Viewbox>
+							<TextBlock Text="{Binding Count}" />
+						</Viewbox>
+					</Border>
+				</DataTemplate>
+			</ItemsControl.Resources>
+			<ItemsControl.ItemContainerStyle>
+				<Style TargetType="ContentPresenter">
+					<Setter Property="Canvas.Left" Value="{Binding Left}" />
+					<Setter Property="Canvas.Top" Value="{Binding Top}" />
+				</Style>
+			</ItemsControl.ItemContainerStyle>
+		</ItemsControl>
 		<!-- The gridline overlay-->
 		<Canvas Width="{Binding Path='BoardSize.Width'}"
 				Height="{Binding Path='BoardSize.Height'}"

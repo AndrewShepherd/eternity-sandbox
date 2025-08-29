@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Eternity\Eternity.csproj" />
+    <ProjectReference Include="..\Eternity.Controls\Eternity.Controls.csproj" />
   </ItemGroup>
 
 </Project>

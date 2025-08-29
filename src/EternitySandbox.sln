@@ -17,6 +17,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Server.WpfApp", "E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Worker.WpfApp", "Eternity.Worker.WpfApp\Eternity.Worker.WpfApp.csproj", "{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eternity.Controls", "Eternity.Controls\Eternity.Controls.csproj", "{392DC8B8-4596-4A59-933F-4B75878635AD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{99020B2A-587D-42AF-8431-3BC4CAD3E849} = {99020B2A-587D-42AF-8431-3BC4CAD3E849}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +56,10 @@ Global
 		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3BEF20F-AEDA-4BB9-89C5-D40A431A75F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{392DC8B8-4596-4A59-933F-4B75878635AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{392DC8B8-4596-4A59-933F-4B75878635AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{392DC8B8-4596-4A59-933F-4B75878635AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{392DC8B8-4596-4A59-933F-4B75878635AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
