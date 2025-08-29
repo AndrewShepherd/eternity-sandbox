@@ -13,7 +13,7 @@ public class Placements
 {
 	private ImmutableList<Placement> _placements = ImmutableList<Placement>.Empty;
 
-	private Constraints _constraints;
+	private Constraints _constraints = Constraints.None;
 
 	public Constraints Constraints => _constraints;
 
@@ -65,5 +65,13 @@ public class Placements
 				_constraints = initialConstraints
 			};
 		}
-	}	
+	}
+
+	public static Placements None = new()
+	{
+		Dimensions = new(0, 0),
+		_placements = ImmutableList<Placement>.Empty,
+		PieceSides = [],
+		_constraints = Constraints.None,
+	};
 }

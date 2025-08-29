@@ -6,6 +6,7 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
+using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
 
 public sealed class MainWindowViewModel : ReactiveObject
@@ -25,8 +26,18 @@ public sealed class MainWindowViewModel : ReactiveObject
 			WorkerStateConnected c => await c.Disconnect(),
 			_ => throw new Exception("Unexpected worker state")
 		};
+
+	private readonly ServiceCollection _serviceCollection = new();
+
+
+	private static void RegisterServices(IServiceCollection serviceCollection)
+	{
+
+	}
+
 	public MainWindowViewModel()
 	{
+		RegisterServices(_serviceCollection);
 		_toggleConnectionDescription = (
 			from s in _workerState
 			select s switch
@@ -40,6 +51,16 @@ public sealed class MainWindowViewModel : ReactiveObject
 		_toggleConnectionCommand = ReactiveCommand.Create(
 			async void () => _workerState.OnNext(await Toggle(_workerState.Value))
 		);
+
+		var placementsObservable = _workerState.SelectMany(
+			ws => ws switch
+			{
+				WorkerStateIdle => Observable.Return(Placements.None),
+				WorkerStateConnected wsc => wsc.Placements,
+				_ => throw new Exception("Unexepcted worker state")
+			}
+		);
+		// TODO: Make this visible in a control
 	}
 
 	public string ToggleConnectionText => _toggleConnectionDescription.Value;

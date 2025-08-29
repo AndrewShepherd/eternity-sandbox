@@ -42,6 +42,8 @@ public sealed class Constraints
 		};
 	}
 
+	public static Constraints None = new(new(0, 0), ImmutableArray<SlotConstraint>.Empty);
+
 	public SlotConstraint At(Position pos) =>
 		this._constraints[_dimensions.PositionToIndex(pos)];
 }

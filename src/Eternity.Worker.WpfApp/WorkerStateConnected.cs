@@ -1,7 +1,14 @@
-﻿using Eternity.Proto;
-using Grpc.Core;
+﻿
 
 namespace Eternity.Worker.WpfApp;
+
+using Eternity;
+using Eternity.Proto;
+using Grpc.Core;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+
+using Placements = Eternity.Placements;
 
 class WorkerStateConnected: WorkerState
 {
@@ -17,6 +24,35 @@ class WorkerStateConnected: WorkerState
 		_listeningTask = Listen();
 	}
 
+	BehaviorSubject<Placements> _placementsSubject = new(Eternity.Placements.None);
+
+	public IObservable<Placements> Placements => _placementsSubject.AsObservable();
+
+	private async Task ProcessIncomingMessage(MessageToWorker message)
+	{
+		if (message.MessageContentsCase == MessageToWorker.MessageContentsOneofCase.RunningState)
+		{
+			var solutionState = SolutionStateProto.Convert(message.RunningState);
+			await this.SetSolutionState(solutionState);
+		}
+	}
+
+	private Task SetSolutionState(SolutionState solutionState)
+	{
+		var stackEntries = solutionState._treeNode switch
+		{
+			Eternity.PartiallyExploredTreeNode tn => 
+				StackEntryExtensions.GetStackEntries(tn)
+					.Select(e => e.StackEntry).ToList(),
+			_ => []
+		};
+
+		this._placementsSubject.OnNext(
+			stackEntries.LastOrDefault()?.Placements ?? Eternity.Placements.None
+		);
+		return Task.CompletedTask;
+	}
+
 	private async Task Listen()
 	{
 		try
@@ -28,8 +64,7 @@ class WorkerStateConnected: WorkerState
 				{
 					break;
 				}
-				var message = _call.ResponseStream.Current;
-				System.Diagnostics.Debug.WriteLine("Received message");
+				await ProcessIncomingMessage(_call.ResponseStream.Current);
 			}
 		}
 		catch(RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
