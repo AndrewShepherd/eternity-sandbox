@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : ReactiveObject
 	private ReactiveCommand<Unit, Unit> _toggleConnectionCommand;
 
 	readonly ObservableAsPropertyHelper<string> _toggleConnectionDescription;
+	readonly ObservableAsPropertyHelper<Placements> _placements;
 
 	private static async Task<WorkerState> Toggle(WorkerState state) =>
 		state switch
@@ -52,16 +53,17 @@ public sealed class MainWindowViewModel : ReactiveObject
 			async void () => _workerState.OnNext(await Toggle(_workerState.Value))
 		);
 
-		var placementsObservable = _workerState.SelectMany(
+		_placements = _workerState.SelectMany(
 			ws => ws switch
 			{
 				WorkerStateIdle => Observable.Return(Placements.None),
 				WorkerStateConnected wsc => wsc.Placements,
 				_ => throw new Exception("Unexepcted worker state")
 			}
-		);
-		// TODO: Make this visible in a control
+		).ToProperty(this, vm => vm.Placements);
 	}
+
+	public Placements Placements => _placements.Value;
 
 	public string ToggleConnectionText => _toggleConnectionDescription.Value;
 	public ICommand ToggleConnectionCommand => _toggleConnectionCommand;

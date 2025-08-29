@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Eternity.Worker.WpfApp"
+		xmlns:EternityControls="clr-namespace:Eternity.Controls;assembly=Eternity.Controls"
         mc:Ignorable="d"
         Title="Eternity Worker" Height="450" Width="800">
 	<Window.Resources>
@@ -15,10 +16,16 @@
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="Auto" />
 		</Grid.ColumnDefinitions>
+		<EternityControls:BoardDisplay
+			Grid.Row="0"
+			Grid.Column="0"
+			Placements="{Binding Placements}"
+		/>
 		<Button 
 			Grid.Row="0" 
-			Grid.Column="0"
+			Grid.Column="1"
 			HorizontalAlignment="Left" 
 			VerticalAlignment="Top"
 			Command="{Binding ToggleConnectionCommand}"

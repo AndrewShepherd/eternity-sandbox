@@ -39,6 +39,12 @@ class WorkerStateConnected: WorkerState
 
 	private Task SetSolutionState(SolutionState solutionState)
 	{
+		// Progress it forward one
+		// Just so that we have something to show for now
+		solutionState._treeNode = solutionState._treeNode.Progress(
+			StackEntryExtensions.ProgressForwards,
+			solutionState._pieceSides
+		);
 		var stackEntries = solutionState._treeNode switch
 		{
 			Eternity.PartiallyExploredTreeNode tn => 
