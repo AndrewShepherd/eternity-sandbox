@@ -6,8 +6,15 @@ package Eternity.Proto;
 import "RunningState.proto";
 
 
+message WorkInstruction {
+	string JobId = 1; 
+	RunningState RunningState = 2;
+	repeated int32 InitialPath = 3;
+	
+}
+
 message MessageToWorker {
 	oneof MessageContents {
-		RunningState RunningState = 1;
+		WorkInstruction WorkInstruction = 1;
 	};
 }

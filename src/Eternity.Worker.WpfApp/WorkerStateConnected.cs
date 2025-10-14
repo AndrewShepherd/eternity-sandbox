@@ -10,18 +10,19 @@ using System.Reactive.Subjects;
 
 using Placements = Eternity.Placements;
 
-class WorkerStateConnected: WorkerState
+sealed class WorkerStateConnected: WorkerState
 {
 	private AsyncDuplexStreamingCall<MessageToServer, MessageToWorker> _call;
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
-	private readonly Task _listeningTask;
-	
+	private readonly WorkerStateContext _context;
+
 	public WorkerStateConnected(
+		WorkerStateContext context,
 		AsyncDuplexStreamingCall<MessageToServer, MessageToWorker> call
 	)
 	{
+		_context = context;
 		_call = call;
-		_listeningTask = Listen();
 	}
 
 	BehaviorSubject<Placements> _placementsSubject = new(Eternity.Placements.None);
@@ -30,25 +31,27 @@ class WorkerStateConnected: WorkerState
 
 	private async Task ProcessIncomingMessage(MessageToWorker message)
 	{
-		if (message.MessageContentsCase == MessageToWorker.MessageContentsOneofCase.RunningState)
+		if (message.MessageContentsCase == MessageToWorker.MessageContentsOneofCase.WorkInstruction)
 		{
-			var solutionState = SolutionStateProto.Convert(message.RunningState);
-			await this.SetSolutionState(solutionState);
+			var workInstruction = message.WorkInstruction;
+			var solutionState = SolutionStateProto.Convert(workInstruction.RunningState);
+			// TODO: Set the path
+			await this.SetSolutionState(solutionState, workInstruction.InitialPath);
 		}
 	}
 
-	private Task SetSolutionState(SolutionState solutionState)
+	private Task SetSolutionState(SolutionState solutionState, IEnumerable<int> initialPath)
 	{
 		// Progress it forward one
 		// Just so that we have something to show for now
 		solutionState._treeNode = solutionState._treeNode.Progress(
-			StackEntryExtensions.ProgressForwards,
-			solutionState._pieceSides
+			solutionState._pieceSides,
+			initialPath
 		);
 		var stackEntries = solutionState._treeNode switch
 		{
 			Eternity.PartiallyExploredTreeNode tn => 
-				StackEntryExtensions.GetStackEntries(tn)
+				StackEntryExtensions.GetStackEntries(tn, initialPath.Skip(1))
 					.Select(e => e.StackEntry).ToList(),
 			_ => []
 		};
@@ -59,7 +62,7 @@ class WorkerStateConnected: WorkerState
 		return Task.CompletedTask;
 	}
 
-	private async Task Listen()
+	public async void Listen()
 	{
 		try
 		{
@@ -76,15 +79,28 @@ class WorkerStateConnected: WorkerState
 		catch(RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
 		{
 		}
+		catch(RpcException ex) when (ex is { StatusCode: StatusCode.Unavailable})
+		{
+			_context.FireEvent(new ServiceUnavailableEvent());
+		}
+		catch(RpcException ex) when (ex.StatusCode is StatusCode.Unknown)
+		{
+			_context.FireEvent(new ServiceUnavailableEvent());
+		}
 		catch(TaskCanceledException)
 		{
 		}
 	}
-	public async Task<WorkerStateIdle> Disconnect()
+	private Task<WorkerStateIdle> Disconnect()
 	{
 		_cancellationTokenSource.Cancel();
-		await _listeningTask;
 		var unawaitedTask = _call.RequestStream.CompleteAsync();
-		return new WorkerStateIdle();
+		return Task.FromResult(new WorkerStateIdle(_context));
 	}
+
+	Task<WorkerState> WorkerState.Toggle() => Disconnect().ContinueWith<WorkerState>(t => t.Result);
+
+	Task<WorkerState> WorkerState.OnTimerFired(int timerId) => Task.FromResult<WorkerState>(this);
+
+	Task<WorkerState> WorkerState.OnServiceUnavailable() => Task.FromResult(_context.RetryAfterDelay());
 }

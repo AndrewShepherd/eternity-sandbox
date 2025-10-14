@@ -13,22 +13,6 @@ public record class StackEntry(
 
 public static class StackEntryExtensions
 {
-	public static int? ProgressForwards(int? startIndex, int count) =>
-		startIndex switch
-		{
-			int n when n >= count - 1 => null,
-			int n => n + 1,
-			_ => 0
-		};
-
-	public static int? ProgressBackwards(int? startIndex, int count) =>
-		startIndex switch
-		{
-			int n when n > 0 => n - 1,
-			int n => null,
-			_ => count - 1
-		};
-
 	private enum ProgressionState
 	{
 		Initial,
@@ -59,7 +43,6 @@ public static class StackEntryExtensions
 	}
 
 	public static TreeNode CreateInitialStack(
-		Func<int?, int, int?> progressIndex,
 		IReadOnlyList<IReadOnlyList<ulong>> pieceSides
 	)
 	{
@@ -70,7 +53,7 @@ public static class StackEntryExtensions
 		// Push the first value
 		(var firstPosition, positioner) = positioner.GetNext(initialPlacements.Constraints);
 		var availablePieces = initialPlacements.Constraints.At(firstPosition).Pieces;
-		var pieceIndex = progressIndex(null, availablePieces.Count);
+		int? pieceIndex = availablePieces.Count > 0 ? 0 : null;
 		if (pieceIndex.HasValue)
 		{
 			Placements? attempt = PuzzleSolver.TryAddPiece(
@@ -94,13 +77,18 @@ public static class StackEntryExtensions
 		return UnsuccessfulPlacementTreeNode.Instance;
 	}
 
-	public static IEnumerable<PartiallyExploredTreeNode> GetStackEntries(PartiallyExploredTreeNode firstElement)
+	public static IEnumerable<PartiallyExploredTreeNode> GetStackEntries(
+		PartiallyExploredTreeNode firstElement,
+		IEnumerable<int> initialPath
+	)
 	{
 		yield return firstElement;
-		var firstChild = firstElement.ChildNodes.OfType<PartiallyExploredTreeNode>().FirstOrDefault();
+		var firstChild = initialPath.Any()
+			? firstElement.ChildNodes.ElementAt(initialPath.FirstOrDefault()) as PartiallyExploredTreeNode
+			: firstElement.ChildNodes.OfType<PartiallyExploredTreeNode>().FirstOrDefault();
 		if (firstChild != null)
 		{
-			foreach(var childEntry in GetStackEntries(firstChild))
+			foreach(var childEntry in GetStackEntries(firstChild, initialPath.Skip(1)))
 			{
 				yield return childEntry;
 			}
@@ -155,82 +143,68 @@ public static class StackEntryExtensions
 	}
 
 	private record class ProgressToFirstSuccessResult(TreeNode treeNode, bool foundSuccess); 
-	private static ProgressToFirstSuccessResult ProgressToFirstSuccess(TreeNode treeNode, Func<int?, int, int?> progressIndex)
+	private static ProgressToFirstSuccessResult ProgressToFirstSuccess(
+		PartiallyExploredTreeNode petn,
+		IEnumerable<int> fixedPath
+	)
 	{
-		if (treeNode is PartiallyExploredTreeNode setn)
+		int index = fixedPath.Any()
+			? fixedPath.First()
+			: petn.ChildNodes.Select((node, index) => (node, index))
+				.Where(t => t.node is UnexploredTreeNode or PartiallyExploredTreeNode)
+				.Select(t => t.index)
+				.First();
+		var childNode = petn.ChildNodes[index];
+		ProgressToFirstSuccessResult result = petn.ChildNodes[index] switch
 		{
-			var childNodeCount = setn.ChildNodes.Count;
-			var thisConstraints = setn.StackEntry.Placements!.Constraints;
-			(var nextPosition, var nextPositioner) = setn.StackEntry.Positioner.GetNext(thisConstraints);
-			var pieces = thisConstraints.At(nextPosition).Pieces;
-			for (
-				int? index = progressIndex(null, childNodeCount);
-				index != null;
-				index = progressIndex(index, childNodeCount)
-			)
+			UnexploredTreeNode => GenerateChildNode(petn, index) switch
 			{
-				TreeNode childNode = setn.ChildNodes[index.Value];
-				if (childNode is UnexploredTreeNode)
-				{
-					var newChild = GenerateChildNode(setn, index.Value);
-					var newSetn = setn.ReplaceAt(index.Value, newChild);
-					if (newChild is PartiallyExploredTreeNode)
-					{
-						return new(newSetn, true);
-					}
-					else
-					{
-						return ProgressToFirstSuccess(newSetn, progressIndex);
-					}
-				}
-				else if (childNode is PartiallyExploredTreeNode childSetn)
-				{
-					(var newChildNode, bool success) = ProgressToFirstSuccess(childNode, progressIndex);
-					var newSetn = setn.ReplaceAt(index.Value, newChildNode);
-					if (success)
-					{
-						return new(newSetn, true);
-					}
-					else
-					{
-						return ProgressToFirstSuccess(newSetn, progressIndex);
-					}
-				}
-			}
-			throw new Exception("StackEntryTreeNode must have at least one unexplored");
-		}
-		else
-		{
-			return new (treeNode, false);
-		}
+				UnsuccessfulPlacementTreeNode uptn => new(uptn, false),
+				TreeNode tn => new(tn, true)
+			},
+			PartiallyExploredTreeNode petn2 => ProgressToFirstSuccess(
+				petn2,
+				fixedPath.Skip(1)
+			),
+			TreeNode t => new(t, false)
+		};
+		return new(
+			petn.ReplaceAt(index, result.treeNode),
+			result.foundSuccess
+		);
 	}
 
 	private static TreeNode ExtendThroughDefaultSelection(
 		TreeNode treeNode,
-		Func<int?, int, int?> progressIndex
+		IEnumerable<int> fixedPath
 	)
 	{
 		if (treeNode is PartiallyExploredTreeNode setn)
 		{
-			var childNodeCount = setn.ChildNodes.Count;
 			for (
-				int? index = progressIndex(null, childNodeCount);
-				index != null;
-				index = progressIndex(index, childNodeCount)
+				int index = 0;
+				index < setn.ChildNodes.Count;
+				++index
 			)
 			{
-				TreeNode childNode = setn.ChildNodes[index.Value];
+				TreeNode childNode = setn.ChildNodes[index];
 				if (childNode is UnexploredTreeNode)
 				{
-					childNode = GenerateChildNode(setn, index.Value);
-					childNode = ExtendThroughDefaultSelection(childNode, progressIndex);
-					return setn.ReplaceAt(index.Value, childNode);
+					childNode = GenerateChildNode(setn, index);
+					childNode = ExtendThroughDefaultSelection(
+						childNode,
+						fixedPath.Skip(1)
+					);
+					return setn.ReplaceAt(index, childNode);
 				}
 				if (childNode is PartiallyExploredTreeNode)
 				{
 					return setn.ReplaceAt(
-						index.Value,
-						ExtendThroughDefaultSelection(childNode, progressIndex)
+						index,
+						ExtendThroughDefaultSelection(
+							childNode,
+							fixedPath.Skip(1)
+						)
 					);
 				}
 			}
@@ -240,19 +214,21 @@ public static class StackEntryExtensions
 
 	public static TreeNode Progress(
 		this TreeNode treeNode,
-		Func<int?, int, int?> progressIndex,
-		IReadOnlyList<IReadOnlyList<ulong>> pieceSides
+		IReadOnlyList<IReadOnlyList<ulong>> pieceSides,
+		IEnumerable<int> initialFixedPath
 	)
 	{
 		if (treeNode is UnexploredTreeNode)
 		{
-			treeNode = CreateInitialStack(progressIndex, pieceSides);
+			treeNode = CreateInitialStack(pieceSides);
 		}
-		else
+		else if (treeNode is PartiallyExploredTreeNode petn)
 		{
-			(treeNode, bool success) = ProgressToFirstSuccess(treeNode, progressIndex);
+			(treeNode, bool success) = ProgressToFirstSuccess(
+				petn,
+				initialFixedPath
+			);
 		}
-		treeNode = ExtendThroughDefaultSelection(treeNode, progressIndex);
 		return treeNode;
 	}
 }

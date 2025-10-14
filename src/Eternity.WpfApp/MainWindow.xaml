@@ -79,20 +79,10 @@
 				<Button Command="{Binding ResetSequenceCommand}">
 					Reset
 				</Button>
-				<Button Command="{Binding GenerateRandomCommand}">
-					Random
-				</Button>
-
-				<Button Command="{Binding GoBackwardsCommand}">
-					&lt; &lt; Backwards
-				</Button>
-				<Button Command="{Binding StepBackwardsCommand}">
-					&lt; Step
-				</Button>
 				<Button Command="{Binding StopCommand}">
 					Stop
 				</Button>
-				<Button Command="{Binding StepForwardCommand}">
+				<Button Command="{Binding StepCommand}">
 					Step &gt;
 				</Button>
 				<Button Command="{Binding StartCommand}">

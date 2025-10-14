@@ -2,31 +2,36 @@
 
 namespace Eternity.Worker.WpfApp;
 
+using Microsoft.Extensions.DependencyInjection;
+using ReactiveUI;
+using System;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading.Channels;
 using System.Windows.Input;
-using Microsoft.Extensions.DependencyInjection;
-using ReactiveUI;
+
+using StateChangeDelegate = Func<WorkerState, Task<WorkerState>>;
 
 public sealed class MainWindowViewModel : ReactiveObject
 {
-	private readonly BehaviorSubject<WorkerState> _workerState = new(
-		new WorkerStateIdle()
-	);
+	private readonly WorkerStateContext _workerStateContext = new();
+	private readonly BehaviorSubject<WorkerState> _workerState;
+
 
 	private ReactiveCommand<Unit, Unit> _toggleConnectionCommand;
 
 	readonly ObservableAsPropertyHelper<string> _toggleConnectionDescription;
 	readonly ObservableAsPropertyHelper<Placements> _placements;
 
-	private static async Task<WorkerState> Toggle(WorkerState state) =>
-		state switch
+	private Channel<StateChangeDelegate> _stateChangingEvents = Channel.CreateUnbounded<StateChangeDelegate>(
+		new UnboundedChannelOptions
 		{
-			WorkerStateIdle i => i.Connect(),
-			WorkerStateConnected c => await c.Disconnect(),
-			_ => throw new Exception("Unexpected worker state")
-		};
+			SingleReader = true,
+			SingleWriter = false,
+			AllowSynchronousContinuations = true,
+		}
+	);
 
 	private readonly ServiceCollection _serviceCollection = new();
 
@@ -38,6 +43,9 @@ public sealed class MainWindowViewModel : ReactiveObject
 
 	public MainWindowViewModel()
 	{
+		_workerState = new(
+			new WorkerStateIdle(_workerStateContext)
+		);
 		RegisterServices(_serviceCollection);
 		_toggleConnectionDescription = (
 			from s in _workerState
@@ -45,23 +53,66 @@ public sealed class MainWindowViewModel : ReactiveObject
 			{
 				WorkerStateIdle => "Connect",
 				WorkerStateConnected => "Disconnect",
+				WorkerStatePendingReconnectionAttempt => "Connection Attempt Pending...",
 				_ => "Unknown state"
 			}
 		).ToProperty(this, vm => vm.ToggleConnectionText);
 
+
+
 		_toggleConnectionCommand = ReactiveCommand.Create(
-			async void () => _workerState.OnNext(await Toggle(_workerState.Value))
+			() =>
+			{
+				_stateChangingEvents.Writer.TryWrite(
+					c => c.Toggle()
+				);
+			}
 		);
 
 		_placements = _workerState.SelectMany(
 			ws => ws switch
 			{
-				WorkerStateIdle => Observable.Return(Placements.None),
 				WorkerStateConnected wsc => wsc.Placements,
-				_ => throw new Exception("Unexepcted worker state")
+				_ => Observable.Return(Placements.None)
 			}
 		).ToProperty(this, vm => vm.Placements);
+
+		_workerStateContext.Events.Subscribe(
+			e => _stateChangingEvents.Writer.TryWrite(
+				currentState => OnStateContextEvent(currentState, e)
+			)
+		);
+
+		HandleStateChangingEvents(_stateChangingEvents.Reader);
+
+		_stateChangingEvents.Writer.TryWrite(
+			d => (d is WorkerStateIdle wsi) ? wsi.Connect() : Task.FromResult(d)
+		);
 	}
+
+	private async void HandleStateChangingEvents(ChannelReader<StateChangeDelegate> cr)
+	{
+		while(await cr.WaitToReadAsync())
+		{
+			while(cr.TryRead(out var d))
+			{
+				var current = _workerState.Value;
+				var next = await d(current);
+				_workerState.OnNext(next);
+			}
+		}
+	}
+
+	private static Task<WorkerState> OnStateContextEvent(
+		WorkerState current,
+		WorkerStateContextEvent e
+	) =>
+		e switch
+		{
+			TimerFiredEvent tfe => current.OnTimerFired(tfe.timerId),
+			ServiceUnavailableEvent => current.OnServiceUnavailable(),
+			_ => Task.FromResult(current)
+		};
 
 	public Placements Placements => _placements.Value;
 

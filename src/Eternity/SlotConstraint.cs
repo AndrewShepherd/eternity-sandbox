@@ -353,7 +353,7 @@ public record class SlotConstraint
 
 public static class SquareConstraintExtensions
 {
-	public static ulong AllPatterns = 0xFFFFFFFFFFFFFFFFl;
+	public static ulong AllPatterns = 0xFFFFFFFFFFFFFFFFL;
 	public static ulong NotEdgePatterns = AllPatterns & ~((ulong)1 << 23);
 
 	public static bool IsEquivalentTo(

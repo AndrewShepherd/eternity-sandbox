@@ -3,7 +3,15 @@
 option csharp_namespace = "Eternity.Proto";
 package Eternity.Proto;
 
+import "RunningState.proto";
+
+message WorkProgress {
+	string JobId = 1;
+	RunningState RunningState = 2;
+}
 
 message MessageToServer {
-
+	oneof MessageContents {
+		WorkProgress WorkProgress = 1;
+	}
 }

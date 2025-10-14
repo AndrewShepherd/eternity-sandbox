@@ -43,20 +43,14 @@ public sealed class MainWindowViewModel : ReactiveObject
 
 	internal async Task SetPieceSides(IReadOnlyList<ulong>[] pieces)
 	{
-
 		var solutionState = new SolutionState(pieces);
-
-		// TODO
-		// Send it to all of the connected workers
-		// The connected workers should display it.
-		foreach(var connectionEntry in Connections)
-		{
-			await connectionEntry.ResponseStream.WriteAsync(
-				new MessageToWorker()
-				{
-					RunningState = SolutionStateProto.Convert(solutionState),	
-				}
-			);
-		}
+		solutionState._treeNode = solutionState._treeNode.Progress(
+			solutionState._pieceSides,
+			[]
+		);
+		var serverJob = await ServerJob.Start(
+			solutionState,
+			Connections
+		);
 	}
 }

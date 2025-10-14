@@ -22,10 +22,10 @@ public static class ProtoPieceConversions
 		pieces.Select(
 			p =>
 				new ulong[] {
-					((ulong)1l) << (int)((p.Sides & 0xFF000000) >> 24),
-					(ulong)1l << (int)((p.Sides & 0x00FF0000) >> 16),
-					(ulong)1l << (int)((p.Sides & 0x0000FF00) >> 8),
-					(ulong)1l << (int)(p.Sides & 0x000000FF)
+					((ulong)1L) << (int)((p.Sides & 0xFF000000) >> 24),
+					(ulong)1L << (int)((p.Sides & 0x00FF0000) >> 16),
+					(ulong)1L << (int)((p.Sides & 0x0000FF00) >> 8),
+					(ulong)1L << (int)(p.Sides & 0x000000FF)
 				}
 		).ToArray();
 }

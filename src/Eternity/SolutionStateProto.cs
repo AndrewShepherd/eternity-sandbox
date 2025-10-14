@@ -48,7 +48,6 @@ public static class SolutionStateProto
 		if (tree.InstanceCase == Proto.TreeNode.InstanceOneofCase.PartiallyExplored)
 		{
 			var treeNode = StackEntryExtensions.CreateInitialStack(
-				StackEntryExtensions.ProgressForwards,
 				pieces
 			);
 			if (treeNode is UnsuccessfulPlacementTreeNode)
