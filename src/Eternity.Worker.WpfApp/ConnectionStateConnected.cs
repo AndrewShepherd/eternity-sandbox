@@ -10,14 +10,14 @@ using System.Reactive.Subjects;
 
 using Placements = Eternity.Placements;
 
-sealed class WorkerStateConnected: WorkerState
+sealed class ConnectionStateConnected: IConnectionState
 {
 	private AsyncDuplexStreamingCall<MessageToServer, MessageToWorker> _call;
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
-	private readonly WorkerStateContext _context;
+	private readonly ConnectionStateContext _context;
 
-	public WorkerStateConnected(
-		WorkerStateContext context,
+	public ConnectionStateConnected(
+		ConnectionStateContext context,
 		AsyncDuplexStreamingCall<MessageToServer, MessageToWorker> call
 	)
 	{
@@ -28,17 +28,6 @@ sealed class WorkerStateConnected: WorkerState
 	BehaviorSubject<Placements> _placementsSubject = new(Eternity.Placements.None);
 
 	public IObservable<Placements> Placements => _placementsSubject.AsObservable();
-
-	private async Task ProcessIncomingMessage(MessageToWorker message)
-	{
-		if (message.MessageContentsCase == MessageToWorker.MessageContentsOneofCase.WorkInstruction)
-		{
-			var workInstruction = message.WorkInstruction;
-			var solutionState = SolutionStateProto.Convert(workInstruction.RunningState);
-			// TODO: Set the path
-			await this.SetSolutionState(solutionState, workInstruction.InitialPath);
-		}
-	}
 
 	private Task SetSolutionState(SolutionState solutionState, IEnumerable<int> initialPath)
 	{
@@ -62,7 +51,7 @@ sealed class WorkerStateConnected: WorkerState
 		return Task.CompletedTask;
 	}
 
-	public async void Listen()
+	private async void Listen(IObserver<MessageToWorker> observer)
 	{
 		try
 		{
@@ -73,34 +62,45 @@ sealed class WorkerStateConnected: WorkerState
 				{
 					break;
 				}
-				await ProcessIncomingMessage(_call.ResponseStream.Current);
+				observer.OnNext(_call.ResponseStream.Current);
 			}
 		}
-		catch(RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+		catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
 		{
 		}
-		catch(RpcException ex) when (ex is { StatusCode: StatusCode.Unavailable})
+		catch (RpcException ex) when (ex is { StatusCode: StatusCode.Unavailable })
 		{
 			_context.FireEvent(new ServiceUnavailableEvent());
 		}
-		catch(RpcException ex) when (ex.StatusCode is StatusCode.Unknown)
+		catch (RpcException ex) when (ex.StatusCode is StatusCode.Unknown)
 		{
 			_context.FireEvent(new ServiceUnavailableEvent());
 		}
-		catch(TaskCanceledException)
+		catch (TaskCanceledException)
 		{
+		}
+		finally
+		{
+			observer.OnCompleted();
 		}
 	}
-	private Task<WorkerStateIdle> Disconnect()
+	public System.IObservable<MessageToWorker> Listen()
+	{
+		Subject<MessageToWorker> subject = new();
+		Listen(subject);
+		return subject;
+
+	}
+	private Task<ConnectionStateIdle> Disconnect()
 	{
 		_cancellationTokenSource.Cancel();
 		var unawaitedTask = _call.RequestStream.CompleteAsync();
-		return Task.FromResult(new WorkerStateIdle(_context));
+		return Task.FromResult(new ConnectionStateIdle(_context));
 	}
 
-	Task<WorkerState> WorkerState.Toggle() => Disconnect().ContinueWith<WorkerState>(t => t.Result);
+	Task<IConnectionState> IConnectionState.Toggle() => Disconnect().ContinueWith<IConnectionState>(t => t.Result);
 
-	Task<WorkerState> WorkerState.OnTimerFired(int timerId) => Task.FromResult<WorkerState>(this);
+	Task<IConnectionState> IConnectionState.OnTimerFired(int timerId) => Task.FromResult<IConnectionState>(this);
 
-	Task<WorkerState> WorkerState.OnServiceUnavailable() => Task.FromResult(_context.RetryAfterDelay());
+	Task<IConnectionState> IConnectionState.OnServiceUnavailable() => Task.FromResult(_context.RetryAfterDelay());
 }

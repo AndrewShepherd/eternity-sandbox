@@ -11,12 +11,12 @@ using System.Reactive.Subjects;
 using System.Threading.Channels;
 using System.Windows.Input;
 
-using StateChangeDelegate = Func<WorkerState, Task<WorkerState>>;
+using StateChangeDelegate = Func<IConnectionState, Task<IConnectionState>>;
 
 public sealed class MainWindowViewModel : ReactiveObject
 {
-	private readonly WorkerStateContext _workerStateContext = new();
-	private readonly BehaviorSubject<WorkerState> _workerState;
+	private readonly ConnectionStateContext _workerStateContext = new();
+	private readonly BehaviorSubject<IConnectionState> _connectionState;
 
 
 	private ReactiveCommand<Unit, Unit> _toggleConnectionCommand;
@@ -43,17 +43,17 @@ public sealed class MainWindowViewModel : ReactiveObject
 
 	public MainWindowViewModel()
 	{
-		_workerState = new(
-			new WorkerStateIdle(_workerStateContext)
+		_connectionState = new(
+			new ConnectionStateIdle(_workerStateContext)
 		);
 		RegisterServices(_serviceCollection);
 		_toggleConnectionDescription = (
-			from s in _workerState
+			from s in _connectionState
 			select s switch
 			{
-				WorkerStateIdle => "Connect",
-				WorkerStateConnected => "Disconnect",
-				WorkerStatePendingReconnectionAttempt => "Connection Attempt Pending...",
+				ConnectionStateIdle => "Connect",
+				ConnectionStateConnected => "Disconnect",
+				ConnectionStatePendingRetry => "Connection Attempt Pending...",
 				_ => "Unknown state"
 			}
 		).ToProperty(this, vm => vm.ToggleConnectionText);
@@ -69,14 +69,7 @@ public sealed class MainWindowViewModel : ReactiveObject
 			}
 		);
 
-		_placements = _workerState.SelectMany(
-			ws => ws switch
-			{
-				WorkerStateConnected wsc => wsc.Placements,
-				_ => Observable.Return(Placements.None)
-			}
-		).ToProperty(this, vm => vm.Placements);
-
+		_placements = _workerStateContext.Placements.ToProperty(this, vm => vm.Placements);
 		_workerStateContext.Events.Subscribe(
 			e => _stateChangingEvents.Writer.TryWrite(
 				currentState => OnStateContextEvent(currentState, e)
@@ -86,7 +79,7 @@ public sealed class MainWindowViewModel : ReactiveObject
 		HandleStateChangingEvents(_stateChangingEvents.Reader);
 
 		_stateChangingEvents.Writer.TryWrite(
-			d => (d is WorkerStateIdle wsi) ? wsi.Connect() : Task.FromResult(d)
+			d => (d is ConnectionStateIdle wsi) ? wsi.Connect() : Task.FromResult(d)
 		);
 	}
 
@@ -96,16 +89,16 @@ public sealed class MainWindowViewModel : ReactiveObject
 		{
 			while(cr.TryRead(out var d))
 			{
-				var current = _workerState.Value;
+				var current = _connectionState.Value;
 				var next = await d(current);
-				_workerState.OnNext(next);
+				_connectionState.OnNext(next);
 			}
 		}
 	}
 
-	private static Task<WorkerState> OnStateContextEvent(
-		WorkerState current,
-		WorkerStateContextEvent e
+	private static Task<IConnectionState> OnStateContextEvent(
+		IConnectionState current,
+		ConnectionStateEvent e
 	) =>
 		e switch
 		{
