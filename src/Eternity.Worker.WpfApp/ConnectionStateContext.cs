@@ -31,6 +31,47 @@
 		);
 
 		internal void SetPlacementsSource(IObservable<Placements> source) => _placementsSubject.OnNext(source);
+
+		// This needs to go into Eterntiy lib
+		private static Eternity.TreeNode GetMostAdvancedNode(Eternity.TreeNode node, IEnumerable<int> path)
+		{
+			if (node is Eternity.PartiallyExploredTreeNode petn)
+			{
+				var child = path.Any()
+					? petn.ChildNodes[path.First()]
+					: petn.ChildNodes.OfType<Eternity.PartiallyExploredTreeNode>().FirstOrDefault();
+				if (child is Eternity.PartiallyExploredTreeNode)
+				{
+					return GetMostAdvancedNode(child, path.Skip(1));
+				}
+			}
+			return node;
+		}
+
+		internal void SetWork(SolutionState solutionState, IEnumerable<int> initialPath)
+		{
+			if (_workerState is WorkerStateWorking wsw)
+			{
+				wsw.CancellationTokenSource.Cancel();
+			}
+			var cancellationTokenSource = new CancellationTokenSource();
+			_workerState = new WorkerStateWorking(cancellationTokenSource);
+			var treeNodes = Worker.DoWork(solutionState, initialPath, cancellationTokenSource.Token);
+			var mostAdvancedNode = treeNodes.Select(
+				tn => GetMostAdvancedNode(tn, initialPath)
+			);
+			var placements = mostAdvancedNode.Select(
+				tn =>
+					(tn as Eternity.PartiallyExploredTreeNode)
+						?.StackEntry
+						?.Placements
+						?? Eternity.Placements.None
+			);
+			this.SetPlacementsSource(placements);
+		}
+
 		public IObservable<Placements> Placements => _placementsSubject.SelectMany(_ => _);
+
+		private WorkerState _workerState = new WorkerStateIdle();
 	}
 }

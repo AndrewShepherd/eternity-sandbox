@@ -38,21 +38,6 @@ namespace Eternity.Worker.WpfApp
 						context.SetTimer(_retryTimespan)
 				);
 
-		private static Eternity.TreeNode GetMostAdvancedNode(Eternity.TreeNode node, IEnumerable<int> path)
-		{
-			if (node is Eternity.PartiallyExploredTreeNode petn)
-			{
-				var child = path.Any()
-					? petn.ChildNodes[path.First()]
-					: petn.ChildNodes.OfType<Eternity.PartiallyExploredTreeNode>().FirstOrDefault();
-				if (child is Eternity.PartiallyExploredTreeNode)
-				{
-					return GetMostAdvancedNode(child, path.Skip(1));
-				}
-			}
-			return node;
-		}
-
 		private static void ProcessIncomingMessage(
 			ConnectionStateContext context,
 			MessageToWorker message
@@ -63,18 +48,7 @@ namespace Eternity.Worker.WpfApp
 				var workInstruction = message.WorkInstruction;
 				var solutionState = SolutionStateProto.Convert(workInstruction.RunningState);
 
-				var treeNodes = Worker.DoWork(solutionState, workInstruction.InitialPath, CancellationToken.None);
-				var mostAdvancedNode = treeNodes.Select(
-					tn => GetMostAdvancedNode(tn, workInstruction.InitialPath)
-				);
-				var placements = mostAdvancedNode.Select(
-					tn =>
-						(tn as Eternity.PartiallyExploredTreeNode)
-							?.StackEntry
-							?.Placements 
-							?? Eternity.Placements.None
-				);
-				context.SetPlacementsSource(placements);
+				context.SetWork(solutionState, workInstruction.InitialPath);
 			}
 		}
 
