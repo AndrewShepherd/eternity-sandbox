@@ -154,8 +154,8 @@ public static class StackEntryExtensions
 				.Where(t => t.node is UnexploredTreeNode or PartiallyExploredTreeNode)
 				.Select(t => t.index)
 				.First();
-		var childNode = petn.ChildNodes[index];
-		ProgressToFirstSuccessResult result = petn.ChildNodes[index] switch
+		var childNode = petn[index];
+		ProgressToFirstSuccessResult result = petn[index] switch
 		{
 			UnexploredTreeNode => GenerateChildNode(petn, index) switch
 			{

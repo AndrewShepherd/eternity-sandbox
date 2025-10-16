@@ -40,7 +40,6 @@ namespace Eternity
 				if (node is UnexploredTreeNode)
 				{
 					var stack = GetStack(rootNode, path).ToArray();
-					int dummy = 3;
 					var newNode = global::Eternity.StackEntryExtensions.GenerateChildNode(
 						(PartiallyExploredTreeNode)stack[^2],
 						path.Last()
@@ -49,7 +48,7 @@ namespace Eternity
 					for(int i = stack.Length - 2; i >= 0; --i)
 					{
 						var nodeToChange = stack[i];
-						var nodeToChangeChildIndex = path[i]; // Off by one error?
+						var nodeToChangeChildIndex = path[i];
 						if (nodeToChange is PartiallyExploredTreeNode p)
 						{
 							nodeToChange = p.ReplaceAt(nodeToChangeChildIndex, newChildNode);

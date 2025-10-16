@@ -44,6 +44,16 @@ public class PartiallyExploredTreeNode : TreeNode
 {
 	public required ImmutableList<TreeNode> ChildNodes { get; init; }
 
+	public TreeNode this[int key]
+	{
+		get => ChildNodes[key];
+	}
+
+	public TreeNode this[System.Index index]
+	{
+		get => ChildNodes[index];
+	}
+
 	public required BigInteger NodesExplored { get; init; }
 	public BigInteger? TotalNodesEstimate { get; init; } = null;
 
