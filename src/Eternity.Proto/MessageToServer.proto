@@ -7,7 +7,7 @@ import "RunningState.proto";
 
 message WorkProgress {
 	string JobId = 1;
-	RunningState RunningState = 2;
+	TreeNode Tree = 2;
 }
 
 message MessageToServer {

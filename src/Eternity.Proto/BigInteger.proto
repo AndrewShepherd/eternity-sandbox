@@ -1,0 +1,11 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Eternity.Proto";
+
+package Eternity.Proto;
+
+// BigInteger? How do we serialize that?
+// https://stackoverflow.com/questions/40612798/protobuff-serialise-system-numerics-biginteger
+message BigInteger {
+	bytes bytes = 1;
+}

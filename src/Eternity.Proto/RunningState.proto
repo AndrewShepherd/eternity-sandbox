@@ -5,7 +5,31 @@ option csharp_namespace = "Eternity.Proto";
 package Eternity.Proto;
 
 import "Piece.Proto";
-import "TreeNode.Proto";
+import "BigInteger.proto";
+import "Placements.proto";
+
+
+message UnexploredTreeNode {}
+
+message UnsuccessfulPlacementTreeNode {}
+
+message FullyExploredTreeNode {
+	BigInteger NodesExplored = 1;
+	repeated Placements Solutions = 2;
+}
+
+message TreeNode {
+	oneof Instance {
+		UnexploredTreeNode Unexplored = 1;
+		UnsuccessfulPlacementTreeNode UnsuccessfulPlacement = 2;
+		FullyExploredTreeNode FullyExplored = 3;
+		PartiallyExploredTreeNode PartiallyExplored = 4;
+	}
+}
+
+message PartiallyExploredTreeNode {
+	repeated TreeNode ChildNodes = 1;
+}
 
 message RunningState {
 	repeated Piece Pieces = 1;

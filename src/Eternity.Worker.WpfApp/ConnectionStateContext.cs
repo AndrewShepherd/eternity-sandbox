@@ -12,8 +12,12 @@
 
 	internal class ConnectionStateContext
 	{
-		System.Reactive.Subjects.Subject<ConnectionStateEvent> _events = new();
+		Subject<ConnectionStateEvent> _events = new();
+		Subject<IObservable<Eternity.Proto.MessageToServer>> _returnMessagesSubject = new();
+
 		public IObservable<ConnectionStateEvent> Events => _events;
+
+
 
 		private int _timerId = 0;
 		public int SetTimer(TimeSpan length)
@@ -48,7 +52,15 @@
 			return node;
 		}
 
-		internal void SetWork(SolutionState solutionState, IEnumerable<int> initialPath)
+		internal static Placements GetMostAdvancedPlacements(TreeNode treeNode, IEnumerable<int> initialPath)
+			=>
+				GetMostAdvancedNode(treeNode, initialPath) switch
+				{
+					PartiallyExploredTreeNode petn => petn.StackEntry.Placements ?? Eternity.Placements.None,
+					_ => Eternity.Placements.None
+				};
+
+		internal IObservable<TreeNode> SetWork(SolutionState solutionState, IEnumerable<int> initialPath)
 		{
 			if (_workerState is WorkerStateWorking wsw)
 			{
@@ -57,6 +69,7 @@
 			var cancellationTokenSource = new CancellationTokenSource();
 			_workerState = new WorkerStateWorking(cancellationTokenSource);
 			var treeNodes = Worker.DoWork(solutionState, initialPath, cancellationTokenSource.Token);
+
 			var mostAdvancedNode = treeNodes.Select(
 				tn => GetMostAdvancedNode(tn, initialPath)
 			);
@@ -68,9 +81,17 @@
 						?? Eternity.Placements.None
 			);
 			this.SetPlacementsSource(placements);
+			return treeNodes;
+		}
+
+		internal void SetReturnMessages(IObservable<Eternity.Proto.MessageToServer> messageToSendBack)
+		{
+			throw new NotImplementedException();
 		}
 
 		public IObservable<Placements> Placements => _placementsSubject.SelectMany(_ => _);
+		public IObservable<Proto.MessageToServer> MessagesToServer => _returnMessagesSubject
+		.SelectMany(_ => _);
 
 		private WorkerState _workerState = new WorkerStateIdle();
 	}

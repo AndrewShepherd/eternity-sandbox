@@ -38,6 +38,16 @@ namespace Eternity.Worker.WpfApp
 						context.SetTimer(_retryTimespan)
 				);
 
+		private static MessageToServer ConvertToServerMessage(Eternity.TreeNode treeNode, string jobId) =>
+			new()
+			{
+				WorkProgress = new()
+				{
+					JobId = jobId,
+					Tree = ProtoTreeNodeConversions.Convert(treeNode),
+				}
+			};
+
 		private static void ProcessIncomingMessage(
 			ConnectionStateContext context,
 			MessageToWorker message
@@ -48,7 +58,12 @@ namespace Eternity.Worker.WpfApp
 				var workInstruction = message.WorkInstruction;
 				var solutionState = SolutionStateProto.Convert(workInstruction.RunningState);
 
-				context.SetWork(solutionState, workInstruction.InitialPath);
+				var treeNodes = context.SetWork(solutionState, workInstruction.InitialPath);
+
+				var messagesToSendBack = treeNodes.Select(
+					tn => ConvertToServerMessage(tn, workInstruction.JobId)
+				);
+				context.SetReturnMessages(messagesToSendBack);
 			}
 		}
 
